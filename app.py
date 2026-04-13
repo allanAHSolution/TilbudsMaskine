@@ -15,7 +15,7 @@ NUMMER_FILE        = os.path.join(BASE_DIR, 'nummer.txt')
 LEVERANDOERER_FILE = os.path.join(BASE_DIR, 'leverandoerer.json')
 
 ADMIN_USER = "allan"
-ADMIN_PASS = "ahsolution2026-"
+ADMIN_PASS = "ahsolution-Gjern-26"
 
 MAANEDER = ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun",
             "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"]

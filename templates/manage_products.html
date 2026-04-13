@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stamdata | AhSolution ERP</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        :root {
+            --accent:     #1e325a;
+            --bg-light:   #f4f7f9;
+            --text-dark:  #1e293b;
+            --text-muted: #64748b;
+            --border:     #e2e8f0;
+        }
+        body {
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            padding-bottom: 60px;
+        }
+
+        /* Navbar */
+        .navbar { background: #ffffff; border-bottom: 1px solid var(--border); padding: 16px 0; }
+        .navbar-brand img { height: 48px; }
+        .mantra-text { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 2px; color: var(--accent); font-weight: 700; }
+
+        /* Knapper */
+        .btn-primary { background-color: var(--accent); border-color: var(--accent); }
+        .btn-primary:hover { background-color: #162545; border-color: #162545; }
+        .btn-outline-primary { color: var(--accent); border-color: var(--accent); }
+        .btn-outline-primary:hover { background-color: var(--accent); color: white; }
+
+        /* Kort */
+        .card { background: #ffffff; border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.04); }
+
+        /* Faner */
+        .nav-tabs { border-bottom: 2px solid var(--border); margin-bottom: 24px; }
+        .nav-tabs .nav-link {
+            color: var(--text-muted);
+            border: none;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            padding: 10px 20px;
+            font-weight: 600;
+            font-size: 0.88rem;
+            border-radius: 0;
+            transition: color 0.15s;
+        }
+        .nav-tabs .nav-link:hover { color: var(--accent); }
+        .nav-tabs .nav-link.active { color: var(--accent); border-bottom-color: var(--accent); background: none; }
+
+        /* Rækker */
+        .data-row {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            transition: box-shadow 0.15s;
+        }
+        .data-row:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+        .data-row form { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+        .form-label-xs {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            font-weight: 700;
+            margin-bottom: 3px;
+            display: block;
+        }
+        .header-row {
+            display: flex;
+            gap: 8px;
+            padding: 4px 14px 8px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+        }
+
+        /* Leverandør-kort (udvidet visning) */
+        .lev-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 18px 20px;
+            margin-bottom: 12px;
+            transition: box-shadow 0.15s;
+        }
+        .lev-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.07); }
+        .lev-meta { font-size: 0.8rem; color: var(--text-muted); }
+        .lev-meta a { color: var(--accent); text-decoration: none; }
+        .lev-meta a:hover { text-decoration: underline; }
+
+        /* Tomtilstand */
+        .empty-state { text-align: center; padding: 48px 0; color: var(--text-muted); }
+        .empty-state i { font-size: 2rem; margin-bottom: 12px; display: block; }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar sticky-top mb-4">
+        <div class="container d-flex justify-content-between align-items-center">
+            <a href="/" class="navbar-brand">
+                <img src="/static/logo.png" alt="AhSolution Logo">
+            </a>
+            <div class="mantra-text d-none d-md-block">Idea. Solution. Execution.</div>
+            <a href="/admin" class="btn btn-sm btn-outline-secondary" style="font-size:0.8rem;">← Dashboard</a>
+        </div>
+    </nav>
+
+    <div class="container" style="max-width: 900px;">
+
+        <!-- Sideoverskrift -->
+        <div class="mb-4">
+            <div class="fw-bold" style="font-size:1.5rem; color: var(--accent);">Stamdata</div>
+            <div class="small" style="color: var(--text-muted);">Administrer produkter, priser og leverandører</div>
+        </div>
+
+        <!-- Faner -->
+        <ul class="nav nav-tabs">
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if aktiv_fane == 'produkter' }}"
+                   href="{{ url_for('manage_products', fane='produkter') }}">
+                    Produkter &amp; Priser
+                    <span class="badge ms-1" style="background: var(--border); color: var(--text-muted); font-size:0.65rem;">{{ produkter|length }}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if aktiv_fane == 'leverandoerer' }}"
+                   href="{{ url_for('manage_products', fane='leverandoerer') }}">
+                    Leverandører
+                    <span class="badge ms-1" style="background: var(--border); color: var(--text-muted); font-size:0.65rem;">{{ leverandoerer|length }}</span>
+                </a>
+            </li>
+        </ul>
+
+
+        <!-- ══════════════════════════════════════════ -->
+        <!-- FANE 1: PRODUKTER                         -->
+        <!-- ══════════════════════════════════════════ -->
+        {% if aktiv_fane == 'produkter' %}
+
+        <!-- Tilføj produkt -->
+        <div class="card p-4 mb-4">
+            <div class="fw-bold mb-3" style="color: var(--accent); font-size:0.9rem;">Tilføj nyt produkt</div>
+            <form method="POST" action="/admin/produkter"
+                  style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
+                <input type="hidden" name="action" value="add">
+                <div style="flex:5; min-width:140px;">
+                    <label class="form-label-xs">Produktnavn</label>
+                    <input type="text" name="navn" class="form-control form-control-sm" placeholder="f.eks. Olieudskiller NS6" required>
+                </div>
+                <div style="flex:2; min-width:80px;">
+                    <label class="form-label-xs">Standardpris</label>
+                    <input type="number" step="0.01" name="pris" class="form-control form-control-sm" placeholder="0" required>
+                </div>
+                <div style="flex:2; min-width:60px;">
+                    <label class="form-label-xs">Enhed</label>
+                    <input type="text" name="enhed" class="form-control form-control-sm" placeholder="stk">
+                </div>
+                <div style="flex:3; min-width:120px;">
+                    <label class="form-label-xs">Leverandør</label>
+                    <select name="leverandoer" class="form-select form-select-sm">
+                        <option value="">— Ingen —</option>
+                        {% for lev in leverandoerer %}
+                        <option value="{{ lev.navn }}">{{ lev.navn }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <button type="submit" class="btn btn-sm btn-primary fw-bold px-4">Tilføj</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Produktliste -->
+        {% if produkter %}
+        <div class="header-row">
+            <div style="flex:5;">Navn</div>
+            <div style="flex:2;">Pris</div>
+            <div style="flex:1.5;">Enhed</div>
+            <div style="flex:3;">Leverandør</div>
+            <div style="flex:2;"></div>
+        </div>
+
+        {% for p in produkter %}
+        <div class="data-row">
+            <form method="POST" action="/admin/produkter">
+                <input type="hidden" name="index" value="{{ loop.index0 }}">
+                <div style="flex:5; min-width:120px;">
+                    <input type="text" name="navn" value="{{ p.navn }}" class="form-control form-control-sm">
+                </div>
+                <div style="flex:2; min-width:70px;">
+                    <input type="number" step="0.01" name="pris" value="{{ p.pris }}" class="form-control form-control-sm">
+                </div>
+                <div style="flex:1.5; min-width:55px;">
+                    <input type="text" name="enhed" value="{{ p.enhed if p.enhed else '' }}"
+                           class="form-control form-control-sm" placeholder="stk">
+                </div>
+                <div style="flex:3; min-width:100px;">
+                    <select name="leverandoer" class="form-select form-select-sm">
+                        <option value="">— Ingen —</option>
+                        {% for lev in leverandoerer %}
+                        <option value="{{ lev.navn }}" {{ 'selected' if p.get('leverandoer') == lev.navn }}>{{ lev.navn }}</option>
+                        {% endfor %}
+                        {% if p.get('leverandoer') and p.leverandoer not in leverandoerer|map(attribute='navn')|list %}
+                        <option value="{{ p.leverandoer }}" selected>{{ p.leverandoer }}</option>
+                        {% endif %}
+                    </select>
+                </div>
+                <div style="flex:2; display:flex; justify-content:flex-end; gap:6px;">
+                    <button type="submit" name="action" value="edit" class="btn btn-sm btn-primary">Gem</button>
+                    <button type="submit" name="action" value="delete" class="btn btn-sm btn-outline-danger"
+                            onclick="return confirm('Slet \'{{ p.navn }}\'?')">Slet</button>
+                </div>
+            </form>
+        </div>
+        {% endfor %}
+
+        {% else %}
+        <div class="empty-state">
+            <i class="fa fa-cubes"></i>
+            Ingen produkter endnu — tilføj det første ovenfor.
+        </div>
+        {% endif %}
+
+
+        <!-- ══════════════════════════════════════════ -->
+        <!-- FANE 2: LEVERANDØRER                      -->
+        <!-- ══════════════════════════════════════════ -->
+        {% elif aktiv_fane == 'leverandoerer' %}
+
+        <!-- Tilføj leverandør -->
+        <div class="card p-4 mb-4">
+            <div class="fw-bold mb-3" style="color: var(--accent); font-size:0.9rem;">Tilføj ny leverandør</div>
+            <form method="POST" action="/admin/leverandoerer">
+                <input type="hidden" name="action" value="add">
+                <div class="row g-2 mb-2">
+                    <div class="col-md-4">
+                        <label class="form-label-xs">Firmanavn</label>
+                        <input type="text" name="navn" class="form-control form-control-sm" placeholder="Leverandør A/S" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label-xs">Kontaktperson</label>
+                        <input type="text" name="kontakt" class="form-control form-control-sm" placeholder="Navn">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label-xs">Telefon</label>
+                        <input type="text" name="telefon" class="form-control form-control-sm" placeholder="+47 / +45 ...">
+                    </div>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label-xs">E-mail</label>
+                        <input type="email" name="email" class="form-control form-control-sm" placeholder="firma@eksempel.dk">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label-xs">Hjemmeside</label>
+                        <input type="text" name="hjemmeside" class="form-control form-control-sm" placeholder="www.firma.dk">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label-xs">Noter</label>
+                        <input type="text" name="noter" class="form-control form-control-sm" placeholder="f.eks. primær OUdskiller-lev.">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-sm btn-primary fw-bold px-4">Tilføj leverandør</button>
+            </form>
+        </div>
+
+        <!-- Leverandørliste -->
+        {% if leverandoerer %}
+        {% for lev in leverandoerer %}
+        <div class="lev-card">
+            <form method="POST" action="/admin/leverandoerer">
+                <input type="hidden" name="action" value="edit">
+                <input type="hidden" name="index" value="{{ loop.index0 }}">
+
+                <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                    <div style="flex:1; min-width:200px;">
+                        <label class="form-label-xs">Firmanavn</label>
+                        <input type="text" name="navn" value="{{ lev.navn }}"
+                               class="form-control form-control-sm fw-bold mb-2">
+
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label-xs">Kontaktperson</label>
+                                <input type="text" name="kontakt" value="{{ lev.kontakt }}"
+                                       class="form-control form-control-sm">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label-xs">Telefon</label>
+                                <input type="text" name="telefon" value="{{ lev.telefon }}"
+                                       class="form-control form-control-sm">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label-xs">E-mail</label>
+                                <input type="email" name="email" value="{{ lev.email }}"
+                                       class="form-control form-control-sm">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label-xs">Hjemmeside</label>
+                                <input type="text" name="hjemmeside" value="{{ lev.hjemmeside }}"
+                                       class="form-control form-control-sm">
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <label class="form-label-xs">Noter</label>
+                            <input type="text" name="noter" value="{{ lev.noter }}"
+                                   class="form-control form-control-sm">
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column gap-2 align-items-end">
+                        <!-- Produkter fra denne leverandør -->
+                        {% set lev_produkter = produkter | selectattr('leverandoer', 'equalto', lev.navn) | list %}
+                        {% if lev_produkter %}
+                        <div class="text-end" style="font-size:0.75rem; color: var(--text-muted);">
+                            <div class="fw-bold mb-1">Produkter ({{ lev_produkter|length }})</div>
+                            {% for p in lev_produkter %}
+                            <div>{{ p.navn }}</div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <div class="d-flex gap-2 mt-auto">
+                            <button type="submit" class="btn btn-sm btn-primary">Gem</button>
+                            <button type="submit" name="action" value="delete"
+                                    class="btn btn-sm btn-outline-danger"
+                                    onclick="return confirm('Slet {{ lev.navn }}?')">Slet</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        {% endfor %}
+
+        {% else %}
+        <div class="empty-state">
+            <i class="fa fa-truck"></i>
+            Ingen leverandører endnu — tilføj den første ovenfor.
+        </div>
+        {% endif %}
+
+        {% endif %}
+
+    </div>
+
+
+</body>
+</html>

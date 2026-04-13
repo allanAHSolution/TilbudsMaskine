@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | AhSolution ERP</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/font-awesome.min.css">
+    <style>
+        :root {
+            --accent:     #1e325a;
+            --accent-rgb: 30, 50, 90;
+            --bg-light:   #f4f7f9;
+            --text-dark:  #1e293b;
+            --text-muted: #64748b;
+            --border:     #e2e8f0;
+        }
+
+        body {
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            padding-bottom: 60px;
+        }
+
+        /* ── Navbar ── */
+        .navbar {
+            background: #ffffff;
+            border-bottom: 1px solid var(--border);
+            padding: 16px 0;
+        }
+        .navbar-brand img { height: 48px; }
+        .mantra-text {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        /* ── Knapper ── */
+        .btn-primary { background-color: var(--accent); border-color: var(--accent); }
+        .btn-primary:hover { background-color: #162545; border-color: #162545; }
+        .btn-outline-primary { color: var(--accent); border-color: var(--accent); }
+        .btn-outline-primary:hover { background-color: var(--accent); color: white; }
+        .btn-xs { padding: 0.15rem 0.5rem; font-size: 0.72rem; line-height: 1.4; border-radius: 5px; }
+
+        /* ── Kort ── */
+        .card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.04);
+            margin-bottom: 20px;
+        }
+
+        /* ── Sektion-overskrift ── */
+        .section-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-muted);
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .form-label-xs {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            font-weight: 700;
+            margin-bottom: 3px;
+            display: block;
+        }
+
+        /* ── Tilbudsliste items ── */
+        .tilbud-item {
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--border);
+            border-radius: 8px;
+            background: white;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            transition: box-shadow 0.15s;
+        }
+        .tilbud-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.07); }
+        .tilbud-item.solgt { border-left-color: #22c55e; background-color: #f0fdf4; }
+        .tilbud-item.tabt  { border-left-color: #ef4444; background-color: #fef2f2; }
+        .tilbud-total { font-size: 0.7rem; color: var(--text-muted); }
+
+        /* ── Beskrivelse-input ── */
+        .desc-input {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            border-top: none !important;
+            border-left: none !important;
+            border-right: none !important;
+            border-radius: 0 !important;
+            font-style: italic;
+            background: transparent !important;
+            padding-left: 0;
+        }
+        .desc-input:focus { box-shadow: none; border-color: var(--accent) !important; }
+
+        /* ── Varelinje ── */
+        .line-item {
+            background: var(--bg-light);
+            border: 1px solid var(--border) !important;
+            border-radius: 8px !important;
+        }
+
+        /* ── Produkt-dropdown ── */
+        .produkt-valglist {
+            display: none;
+            position: absolute;
+            z-index: 1050;
+            width: 100%;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            max-height: 220px;
+            overflow-y: auto;
+            margin-top: 2px;
+            left: 0;
+        }
+        .produkt-valg-item {
+            padding: 7px 12px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+        .produkt-valg-item:last-child { border-bottom: none; }
+        .produkt-valg-item:hover { background: #f8fafc; }
+        .produkt-valg-pris { color: var(--text-muted); font-size: 0.72rem; white-space: nowrap; }
+
+        /* ── Stamdatabar ── */
+        .stamdata-bar {
+            background: white;
+            border: 1px solid var(--border);
+            border-left: 4px solid #f59e0b;
+            border-radius: 12px;
+            padding: 14px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        /* ── Graf ── */
+        .chart-container {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-around;
+            height: 160px;
+            padding-top: 28px;
+            border-bottom: 2px solid var(--border);
+        }
+        .chart-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 7%;
+            height: 100%;
+            justify-content: flex-end;
+        }
+        .chart-bar {
+            width: 100%;
+            background: linear-gradient(to top, #16a34a, #4ade80);
+            border-radius: 4px 4px 0 0;
+            min-height: 3px;
+            transition: height 0.6s ease;
+            position: relative;
+        }
+        .chart-bar::after {
+            content: attr(data-value);
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.6rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+        .chart-label { font-size: 0.6rem; color: var(--text-muted); margin-top: 4px; }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar sticky-top mb-4">
+        <div class="container d-flex justify-content-between align-items-center">
+            <a href="/" class="navbar-brand">
+                <img src="/static/logo.png" alt="AhSolution Logo">
+            </a>
+            <div class="mantra-text d-none d-md-block">Idea. Solution. Execution.</div>
+            <a href="/logout" class="btn btn-sm btn-outline-secondary" style="font-size:0.8rem;">Log ud</a>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <!-- Stamdata-bar -->
+        <div class="stamdata-bar">
+            <div>
+                <div class="fw-bold" style="color: var(--text-dark);">Stamdata &amp; Priser</div>
+                <div class="small" style="color: var(--text-muted);">Opdater dine standardydelser og standardpriser</div>
+            </div>
+            <a href="/admin/produkter" class="btn btn-warning fw-bold shadow-sm">
+                <i class="fa fa-edit me-1"></i> Administrer Produkter
+            </a>
+        </div>
+
+        <div class="row g-4">
+
+            <!-- ── VENSTRE: Tilbudsformular ── -->
+            <div class="col-lg-6">
+                <div class="card p-4 sticky-top" style="top: 80px; max-height: calc(100vh - 100px); overflow-y: auto;">
+
+                    {% if rediger_data %}
+                    <div class="d-flex justify-content-between align-items-center mb-3 p-3 rounded" style="background:#fffbeb; border:1px solid #fde68a;">
+                        <span class="small fw-bold" style="color:#92400e;">
+                            <i class="fa fa-pencil me-1"></i> Retter tilbud #{{ rediger_data.nummer }} – {{ rediger_data.kunde }}
+                        </span>
+                        <a href="/admin" class="text-muted text-decoration-none small">✕ Annuller</a>
+                    </div>
+                    {% else %}
+                    <div class="mb-3">
+                        <div class="fw-bold" style="color: var(--accent); font-size:1rem;">Nyt tilbud</div>
+                        <div class="small" style="color: var(--text-muted);">Udfyld felterne og tryk Gem for at generere PDF</div>
+                    </div>
+                    {% endif %}
+
+                    <form action="/opret" method="POST">
+                        <input type="hidden" name="eksisterende_id" value="{{ rediger_data.id if rediger_data else '' }}">
+
+                        <!-- Kunde / Site / Att -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-4">
+                                <label class="form-label-xs">Kunde</label>
+                                <input type="text" name="kunde" class="form-control form-control-sm"
+                                       value="{{ rediger_data.kunde if rediger_data else '' }}" required>
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label-xs">Site</label>
+                                <input type="text" name="site" class="form-control form-control-sm"
+                                       value="{{ rediger_data.site if rediger_data else '' }}">
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label-xs">Att.</label>
+                                <input type="text" name="att" class="form-control form-control-sm"
+                                       value="{{ rediger_data.att if rediger_data else '' }}">
+                            </div>
+                        </div>
+
+                        <!-- Betingelser -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-3">
+                                <label class="form-label-xs">Moms</label>
+                                <select name="moms" class="form-select form-select-sm">
+                                    <option value="nej" {{ 'selected' if rediger_data and rediger_data.moms == 'nej' }}>Ekskl.</option>
+                                    <option value="ja"  {{ 'selected' if rediger_data and rediger_data.moms == 'ja' }}>Inkl. 25%</option>
+                                </select>
+                            </div>
+                            <div class="col-3">
+                                <label class="form-label-xs">Valuta</label>
+                                <select name="valuta" class="form-select form-select-sm">
+                                    <option value="NOK" {{ 'selected' if rediger_data and rediger_data.valuta == 'NOK' }}>NOK</option>
+                                    <option value="DKK" {{ 'selected' if rediger_data and rediger_data.valuta == 'DKK' }}>DKK</option>
+                                    <option value="EUR" {{ 'selected' if rediger_data and rediger_data.valuta == 'EUR' }}>EUR</option>
+                                </select>
+                            </div>
+                            <div class="col-3">
+                                <label class="form-label-xs">Betaling</label>
+                                <select name="betaling" class="form-select form-select-sm">
+                                    <option value="5050"   {{ 'selected' if rediger_data and rediger_data.betaling == '5050' }}>50/50</option>
+                                    <option value="404020" {{ 'selected' if rediger_data and rediger_data.betaling == '404020' }}>40/40/20</option>
+                                </select>
+                            </div>
+                            <div class="col-3">
+                                <label class="form-label-xs">Levering</label>
+                                <select name="incoterm" class="form-select form-select-sm">
+                                    <option value="EXW" {{ 'selected' if rediger_data and rediger_data.incoterm == 'EXW' }}>EXW</option>
+                                    <option value="DAP" {{ 'selected' if rediger_data and rediger_data.incoterm == 'DAP' }}>DAP</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Intro tekst -->
+                        <div class="mb-3">
+                            <label class="form-label-xs">Projektbeskrivelse / Intro</label>
+                            <textarea name="intro_tekst" class="form-control form-control-sm" rows="3"
+                                      style="font-size:0.8rem;">{{ rediger_data.intro_tekst if rediger_data else '' }}</textarea>
+                        </div>
+
+                        <!-- Separator -->
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="form-label-xs mb-0">Varelinjer</span>
+                            <div style="flex:1; height:1px; background: var(--border);"></div>
+                        </div>
+
+                        <!-- Varelinjer -->
+                        <div id="vare-liste">
+                            {% if rediger_data %}
+                                {% for p in rediger_data.produkter %}
+                                <div class="mb-2 p-2 line-item">
+                                    <div class="row g-1 mb-1">
+                                        <div class="col-1 d-flex align-items-center">
+                                            <button type="button" class="btn btn-xs btn-outline-danger"
+                                                    onclick="fjernLinje(this)" title="Fjern linje">✕</button>
+                                        </div>
+                                        <div class="col-6 position-relative">
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" name="p_navn" class="form-control form-control-sm fw-bold"
+                                                       value="{{ p.navn }}" autocomplete="off" placeholder="Produktnavn">
+                                                <button type="button" class="btn btn-outline-secondary px-2"
+                                                        onclick="toggleProduktListe(this)" tabindex="-1" title="Vælg fra liste">▾</button>
+                                            </div>
+                                            <div class="produkt-valglist"></div>
+                                        </div>
+                                        <div class="col-2">
+                                            <input type="number" name="p_antal" class="form-control form-control-sm"
+                                                   value="{{ p.antal }}" min="0" placeholder="Antal">
+                                        </div>
+                                        <div class="col-3">
+                                            <input type="text" name="p_pris" class="form-control form-control-sm"
+                                                   value="{{ p.pris }}" placeholder="Pris">
+                                        </div>
+                                    </div>
+                                    <input type="text" name="p_beskrivelse" class="form-control form-control-sm desc-input"
+                                           placeholder="Linje beskrivelse (valgfri)..."
+                                           value="{{ p.beskrivelse if p.beskrivelse else '' }}">
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="mb-2 p-2 line-item">
+                                    <div class="row g-1 mb-1">
+                                        <div class="col-1 d-flex align-items-center">
+                                            <button type="button" class="btn btn-xs btn-outline-danger"
+                                                    onclick="fjernLinje(this)" title="Fjern linje">✕</button>
+                                        </div>
+                                        <div class="col-6 position-relative">
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" name="p_navn" class="form-control form-control-sm fw-bold"
+                                                       autocomplete="off" placeholder="Produktnavn">
+                                                <button type="button" class="btn btn-outline-secondary px-2"
+                                                        onclick="toggleProduktListe(this)" tabindex="-1" title="Vælg fra liste">▾</button>
+                                            </div>
+                                            <div class="produkt-valglist"></div>
+                                        </div>
+                                        <div class="col-2">
+                                            <input type="number" name="p_antal" class="form-control form-control-sm"
+                                                   value="1" min="0">
+                                        </div>
+                                        <div class="col-3">
+                                            <input type="text" name="p_pris" class="form-control form-control-sm"
+                                                   placeholder="Pris">
+                                        </div>
+                                    </div>
+                                    <input type="text" name="p_beskrivelse" class="form-control form-control-sm desc-input"
+                                           placeholder="Linje beskrivelse (valgfri)...">
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <button type="button" class="btn btn-sm btn-link ps-0 text-decoration-none"
+                                style="color: var(--accent); font-size:0.8rem;"
+                                onclick="nyLinje()">
+                            <i class="fa fa-plus me-1"></i> Tilføj vare
+                        </button>
+
+                        <button type="submit" class="btn btn-primary w-100 mt-3 fw-bold">
+                            {% if rediger_data %}
+                                <i class="fa fa-save me-1"></i> Opdater tilbud
+                            {% else %}
+                                <i class="fa fa-file-pdf-o me-1"></i> Gem &amp; Generer PDF
+                            {% endif %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ── HØJRE: Tilbudsliste + Graf ── -->
+            <div class="col-lg-6">
+
+                <!-- Aktive tilbud -->
+                <div class="card p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <div class="fw-bold" style="color: var(--accent);">Aktive tilbud</div>
+                            <div class="small" style="color: var(--text-muted);">{{ aktive|length }} tilbud i pipeline</div>
+                        </div>
+                    </div>
+
+                    {% if aktive %}
+                    {% for id, t in aktive.items()|reverse %}
+                    {% set total = namespace(val=0) %}
+                    {% for p in t.produkter %}{% set total.val = total.val + (p.antal|float * p.pris|float) %}{% endfor %}
+                    <div class="tilbud-item {{ 'solgt' if t.vundet == True else '' }} {{ 'tabt' if t.vundet == False else '' }}">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div style="min-width:0;">
+                                <div class="fw-bold small text-truncate" style="color: var(--text-dark);">
+                                    #{{ t.nummer }} – {{ t.kunde }}
+                                    {% if t.vundet == True %}
+                                        <span class="badge ms-1" style="background:#16a34a; font-size:0.55rem;">VUNDET</span>
+                                    {% elif t.vundet == False %}
+                                        <span class="badge ms-1" style="background:#dc2626; font-size:0.55rem;">TABT</span>
+                                    {% endif %}
+                                </div>
+                                <div class="tilbud-total">{{ "{:,.0f}".format(total.val) }} {{ t.valuta }} · {{ t.dato }}</div>
+                            </div>
+                            <div class="d-flex flex-wrap gap-1 justify-content-end flex-shrink-0">
+                                <a href="/admin?rediger={{ id }}" class="btn btn-xs btn-outline-primary">Ret</a>
+                                <a href="/download/{{ id }}/tilbud" class="btn btn-xs btn-outline-secondary">PDF</a>
+                                {% if t.vundet == True %}
+                                <a href="/download/{{ id }}/ordrebekraeftelse" class="btn btn-xs btn-outline-dark">Ordrebek.</a>
+                                <a href="/status/{{ id }}/aktiv" class="btn btn-xs btn-outline-secondary">Nulstil</a>
+                                {% else %}
+                                <a href="/status/{{ id }}/vundet" class="btn btn-xs" style="color:#16a34a;border:1px solid #16a34a;">Vundet</a>
+                                <a href="/status/{{ id }}/tabt"   class="btn btn-xs" style="color:#dc2626;border:1px solid #dc2626;">Tabt</a>
+                                {% endif %}
+                                <a href="/arkiver/{{ id }}" class="btn btn-xs btn-outline-warning"
+                                   onclick="return confirm('Arkiver tilbud #{{ t.nummer }}?')">Arkiver</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center py-4" style="color: var(--text-muted);">
+                        <i class="fa fa-inbox fa-2x mb-2 d-block"></i>
+                        <div class="small">Ingen aktive tilbud – opret et via formularen</div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Graf -->
+                <div class="card p-4">
+                    <div class="fw-bold mb-1" style="color: var(--accent); font-size:0.9rem;">
+                        Omsætning {{ aar }}
+                    </div>
+                    <div class="small mb-3" style="color: var(--text-muted);">Vundne tilbud akkumuleret pr. måned</div>
+                    <div class="chart-container">
+                        {% for mnd, total in statistik.items() %}
+                        {% set pct = (total / max_val * 100)|round %}
+                        {% set pct = pct if pct > 2 else 2 %}
+                        <div class="chart-column">
+                            <div class="chart-bar" data-pct="{{ pct }}" data-value="{{ (total/1000)|round(1) }}k"></div>
+                            <div class="chart-label">{{ mnd }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Arkiverede tilbud -->
+                {% if arkiverede %}
+                <div class="card p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-bold" style="color: var(--text-muted); font-size:0.9rem;">Arkiverede</div>
+                            <div class="small" style="color: var(--text-muted);">{{ arkiverede|length }} afsluttede tilbud</div>
+                        </div>
+                        <button class="btn btn-sm btn-link text-muted text-decoration-none"
+                                type="button" data-bs-toggle="collapse" data-bs-target="#ark-liste"
+                                style="font-size:0.8rem;">Vis/skjul</button>
+                    </div>
+                    <div class="collapse mt-3" id="ark-liste">
+                        {% for id, t in arkiverede.items()|reverse %}
+                        {% set total = namespace(val=0) %}
+                        {% for p in t.produkter %}{% set total.val = total.val + (p.antal|float * p.pris|float) %}{% endfor %}
+                        <div class="tilbud-item {{ 'solgt' if t.vundet == True else '' }} mb-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="small fw-bold" style="color: var(--text-dark);">#{{ t.nummer }} – {{ t.kunde }}</div>
+                                    <div class="tilbud-total">{{ "{:,.0f}".format(total.val) }} {{ t.valuta }} · {{ t.dato }}</div>
+                                </div>
+                                <div class="d-flex gap-1">
+                                    <a href="/download/{{ id }}/tilbud" class="btn btn-xs btn-outline-secondary">PDF</a>
+                                    <a href="/genaktiver/{{ id }}" class="btn btn-xs btn-outline-primary">Genaktiver</a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+
+<script type="application/json" id="produkt-data">{{ produkter | tojson }}</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const produktDB = JSON.parse(document.getElementById('produkt-data').textContent);
+
+    document.querySelectorAll('.chart-bar').forEach(function(bar) {
+        bar.style.height = (bar.dataset.pct || 2) + '%';
+    });
+
+    function nyLinje() {
+        const list = document.getElementById('vare-liste');
+        const html = `
+            <div class="mb-2 p-2 line-item">
+                <div class="row g-1 mb-1">
+                    <div class="col-1 d-flex align-items-center">
+                        <button type="button" class="btn btn-xs btn-outline-danger" onclick="fjernLinje(this)" title="Fjern linje">✕</button>
+                    </div>
+                    <div class="col-6 position-relative">
+                        <div class="input-group input-group-sm">
+                            <input type="text" name="p_navn" class="form-control form-control-sm fw-bold"
+                                   autocomplete="off" placeholder="Produktnavn">
+                            <button type="button" class="btn btn-outline-secondary px-2"
+                                    onclick="toggleProduktListe(this)" tabindex="-1" title="Vælg fra liste">▾</button>
+                        </div>
+                        <div class="produkt-valglist"></div>
+                    </div>
+                    <div class="col-2">
+                        <input type="number" name="p_antal" class="form-control form-control-sm" value="1" min="0">
+                    </div>
+                    <div class="col-3">
+                        <input type="text" name="p_pris" class="form-control form-control-sm" placeholder="Pris">
+                    </div>
+                </div>
+                <input type="text" name="p_beskrivelse" class="form-control form-control-sm desc-input"
+                       placeholder="Linje beskrivelse (valgfri)...">
+            </div>`;
+        list.insertAdjacentHTML('beforeend', html);
+    }
+
+    function fjernLinje(btn) {
+        const item = btn.closest('.line-item');
+        if (document.querySelectorAll('.line-item').length > 1) item.remove();
+    }
+
+    function toggleProduktListe(btn) {
+        const wrapper = btn.closest('.position-relative');
+        const liste = wrapper.querySelector('.produkt-valglist');
+        const input = wrapper.querySelector('[name="p_navn"]');
+        const query = input.value.toLowerCase();
+
+        // Luk alle andre åbne lister
+        document.querySelectorAll('.produkt-valglist').forEach(l => {
+            if (l !== liste) l.style.display = 'none';
+        });
+
+        if (liste.style.display === 'block') {
+            liste.style.display = 'none';
+            return;
+        }
+
+        // Byg liste — filtrér hvis der allerede er tekst i feltet
+        const filtreret = query
+            ? produktDB.filter(p => p.navn.toLowerCase().includes(query))
+            : produktDB;
+
+        if (filtreret.length === 0) {
+            liste.innerHTML = '<div class="produkt-valg-item" style="color:#94a3b8;">Ingen match</div>';
+        } else {
+            liste.innerHTML = filtreret.map(p => {
+                const prisNum = parseFloat(p.pris) || 0;
+                const prisVis = prisNum > 0
+                    ? `<span class="produkt-valg-pris">${prisNum.toLocaleString('da-DK')} kr</span>`
+                    : '';
+                return `<div class="produkt-valg-item"
+                             data-navn="${p.navn.replace(/"/g, '&quot;')}"
+                             data-pris="${prisNum}"
+                             onmousedown="valgProdukt(this)">
+                            <span class="fw-bold">${p.navn}</span>${prisVis}
+                        </div>`;
+            }).join('');
+        }
+
+        liste.style.display = 'block';
+        input.focus();
+    }
+
+    function valgProdukt(item) {
+        const wrapper = item.closest('.position-relative');
+        const lineItem = wrapper.closest('.line-item');
+        wrapper.querySelector('[name="p_navn"]').value = item.dataset.navn;
+        const pris = parseFloat(item.dataset.pris);
+        if (pris > 0) lineItem.querySelector('[name="p_pris"]').value = pris;
+        wrapper.querySelector('.produkt-valglist').style.display = 'none';
+    }
+
+    // Filtrer listen mens der skrives
+    document.addEventListener('input', function(e) {
+        if (e.target.name !== 'p_navn') return;
+        const wrapper = e.target.closest('.position-relative');
+        if (!wrapper) return;
+        const liste = wrapper.querySelector('.produkt-valglist');
+        if (liste.style.display !== 'block') return;
+        const query = e.target.value.toLowerCase();
+        liste.querySelectorAll('.produkt-valg-item').forEach(el => {
+            el.style.display = el.querySelector('.fw-bold')?.textContent.toLowerCase().includes(query) ? '' : 'none';
+        });
+    });
+
+    // Luk dropdown ved klik udenfor
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.position-relative')) {
+            document.querySelectorAll('.produkt-valglist').forEach(l => l.style.display = 'none');
+        }
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+# Virtuel miljø
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Data / database (holdes separat på hver server)
+tilbud_arkiv.json
+nummer.txt
+
+# Genererede PDF-filer
+*.pdf
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+*.swp

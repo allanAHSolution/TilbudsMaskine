@@ -1,0 +1,109 @@
+[
+    {
+        "navn": "Olieudskiller kl. 1 NS3",
+        "pris": 0.0,
+        "enhed": "stk",
+        "leverandoer": "Ahlsell "
+    },
+    {
+        "navn": "Olieudskiller kl. 1 NS6",
+        "pris": 0.0,
+        "enhed": "stk",
+        "leverandoer": "Ahlsell "
+    },
+    {
+        "navn": "Olieudskiller kl. 1 NS10",
+        "pris": 0,
+        "enhed": "stk"
+    },
+    {
+        "navn": "Olieudskiller kl. 1 NS20",
+        "pris": 0,
+        "enhed": "stk"
+    },
+    {
+        "navn": "Olieudskiller kl. 1 NS30",
+        "pris": 0,
+        "enhed": "stk"
+    },
+    {
+        "navn": "6m3 sandfang NS6",
+        "pris": 0,
+        "enhed": "stk"
+    },
+    {
+        "navn": "6m3 sandfang NS20",
+        "pris": 0,
+        "enhed": "stk"
+    },
+    {
+        "navn": "9m3 sandfang NS10",
+        "pris": 0,
+        "enhed": "stk"
+    },
+    {
+        "navn": "10m3 sandfang NS30 4m3 pumpekum",
+        "pris": 0,
+        "enhed": "stk"
+    },
+    {
+        "navn": "Sandfang 5m3",
+        "pris": 0,
+        "enhed": "stk"
+    },
+    {
+        "navn": "Sandfang 7m3",
+        "pris": 0,
+        "enhed": "stk"
+    },
+    {
+        "navn": "Sandfang 10m3",
+        "pris": 0,
+        "enhed": "stk"
+    },
+    {
+        "navn": "Sandfang 15m3",
+        "pris": 0,
+        "enhed": "stk"
+    },
+    {
+        "navn": "WaterCare WP600-3 Ø600x1000 m/DXM35-5",
+        "pris": 0,
+        "enhed": "stk"
+    },
+    {
+        "navn": "Tungmetaludskiller",
+        "pris": 0,
+        "enhed": "stk"
+    },
+    {
+        "navn": "Alarm ASA-03 til olie/fedt inkl 3 føler",
+        "pris": 0,
+        "enhed": "stk"
+    },
+    {
+        "navn": "Alarm ASA-02 til olie/fedt inkl 1 føler",
+        "pris": 0,
+        "enhed": "stk"
+    },
+    {
+        "navn": "Prøvetagningsbrønd Ø425x2000mm",
+        "pris": 0,
+        "enhed": "stk"
+    },
+    {
+        "navn": "Højvandsalarm t spildevand m relæ føler",
+        "pris": 0,
+        "enhed": "stk"
+    },
+    {
+        "navn": "Karm/dæksel Ø600 40T fl.",
+        "pris": 0,
+        "enhed": "stk"
+    },
+    {
+        "navn": "Karm ECO425 m/dæksel rund flyd 40t",
+        "pris": 0,
+        "enhed": "stk"
+    }
+]

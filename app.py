@@ -674,10 +674,13 @@ def nyt_tilbud():
     rediger_id = request.args.get('rediger')
     all_data = load_data(TILBUD_FILE, {})
     rediger_data = all_data.get(rediger_id) if rediger_id else None
+    indstillinger = load_data(INDSTILLINGER_FILE, {"kurser": {"NOK": 0.63, "EUR": 7.46, "SEK": 0.67}})
+    kurser = indstillinger.get("kurser", {"NOK": 0.63, "EUR": 7.46, "SEK": 0.67})
 
     return render_template('nyt_tilbud.html',
                            produkter=load_data(PRODUKTER_FILE, []),
-                           rediger_data=rediger_data)
+                           rediger_data=rediger_data,
+                           kurser=kurser)
 
 
 def _malte_default():

@@ -106,7 +106,7 @@
                             </div>
                             <div class="col-3">
                                 <label class="form-label-xs">Valuta</label>
-                                <select name="valuta" class="form-select form-select-sm">
+                                <select id="valuta-select" name="valuta" class="form-select form-select-sm" onchange="opdaterAllePriser()">
                                     <option value="NOK" {{ 'selected' if rediger_data and rediger_data.valuta == 'NOK' }}>NOK</option>
                                     <option value="DKK" {{ 'selected' if rediger_data and rediger_data.valuta == 'DKK' }}>DKK</option>
                                     <option value="EUR" {{ 'selected' if rediger_data and rediger_data.valuta == 'EUR' }}>EUR</option>
@@ -259,9 +259,37 @@
     </div>
 
 <script type="application/json" id="produkt-data">{{ produkter | tojson }}</script>
+<script type="application/json" id="kurser-data">{{ kurser | tojson }}</script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     const produktDB = JSON.parse(document.getElementById('produkt-data').textContent);
+    const KURSER    = JSON.parse(document.getElementById('kurser-data').textContent);
+
+    // Stamdata-priser er i DKK. KURSER fortolkes så til_dkk(x, valuta) = x * KURSER[valuta].
+    // Konvertering: DKK → valuta = pris_dkk / KURSER[valuta]
+    function dkkTilValuta(prisDkk, valuta) {
+        if (!valuta || valuta === 'DKK') return prisDkk;
+        const k = KURSER[valuta];
+        return k ? prisDkk / k : prisDkk;
+    }
+    function aktivValuta() {
+        const el = document.getElementById('valuta-select');
+        return el ? el.value : 'NOK';
+    }
+    function fmtPris(n) {
+        return Math.round(n).toLocaleString('da-DK');
+    }
+    // Når valuta ændres: konverter alle linjepriser fra deres oprindelige DKK-pris
+    function opdaterAllePriser() {
+        const valuta = aktivValuta();
+        document.querySelectorAll('.line-item').forEach(li => {
+            const prisInput = li.querySelector('[name="p_pris"]');
+            const dkk = parseFloat(prisInput.dataset.dkk);
+            if (!isNaN(dkk) && dkk > 0) {
+                prisInput.value = fmtPris(dkkTilValuta(dkk, valuta));
+            }
+        });
+    }
 
     function nyLinje() {
         const list = document.getElementById('vare-liste');
@@ -309,12 +337,14 @@
         if (filtreret.length === 0) {
             liste.innerHTML = '<div class="produkt-valg-item" style="color:#94a3b8;">Ingen match</div>';
         } else {
+            const valuta = aktivValuta();
             liste.innerHTML = filtreret.map(p => {
-                const prisNum = parseFloat(p.pris) || 0;
-                const prisVis = prisNum > 0 ? `<span class="produkt-valg-pris">${prisNum.toLocaleString('da-DK')} kr</span>` : '';
+                const prisDkk = parseFloat(p.pris) || 0;
+                const prisVal = dkkTilValuta(prisDkk, valuta);
+                const prisVis = prisDkk > 0 ? `<span class="produkt-valg-pris">${fmtPris(prisVal)} ${valuta}</span>` : '';
                 return `<div class="produkt-valg-item"
                              data-navn="${p.navn.replace(/"/g, '&quot;')}"
-                             data-pris="${prisNum}"
+                             data-pris="${prisDkk}"
                              onmousedown="valgProdukt(this)">
                             <span class="fw-bold">${p.navn}</span>${prisVis}</div>`;
             }).join('');
@@ -324,11 +354,15 @@
     }
 
     function valgProdukt(item) {
-        const wrapper = item.closest('.position-relative');
+        const wrapper  = item.closest('.position-relative');
         const lineItem = wrapper.closest('.line-item');
         wrapper.querySelector('[name="p_navn"]').value = item.dataset.navn;
-        const pris = parseFloat(item.dataset.pris);
-        if (pris > 0) lineItem.querySelector('[name="p_pris"]').value = pris;
+        const prisDkk = parseFloat(item.dataset.pris);
+        if (prisDkk > 0) {
+            const prisInput = lineItem.querySelector('[name="p_pris"]');
+            prisInput.dataset.dkk = prisDkk;  // husk DKK-prisen til evt. valuta-skift
+            prisInput.value = fmtPris(dkkTilValuta(prisDkk, aktivValuta()));
+        }
         wrapper.querySelector('.produkt-valglist').style.display = 'none';
     }
 

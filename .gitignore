@@ -19,3 +19,6 @@ nummer.txt
 # IDE
 .vscode/
 *.swp
+
+# Claude Code memory/sessions
+.claude/

@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="da" id="html-root">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vandbesparings-beregner | AhSolution</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/font-awesome.min.css">
+    <style>
+        :root {
+            --blue:    #0ea5e9;
+            --blue-dk: #0284c7;
+            --green:   #059669;
+            --navy:    #1e325a;
+            --text:    #1e293b;
+            --muted:   #64748b;
+            --border:  #e2e8f0;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background: linear-gradient(160deg, #f0f9ff 0%, #e0f2fe 60%, #ecfdf5 100%);
+            min-height: 100vh;
+            color: var(--text);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            padding-bottom: 60px;
+        }
+
+        /* ── Header ── */
+        header {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 16px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        header img { height: 42px; }
+        .header-tagline {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--blue);
+            font-weight: 700;
+        }
+
+        /* ── Hero ── */
+        .hero {
+            text-align: center;
+            padding: 48px 16px 32px;
+        }
+        .hero-icon {
+            font-size: 3rem;
+            margin-bottom: 12px;
+            display: block;
+        }
+        .hero h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--navy);
+            margin-bottom: 10px;
+        }
+        .hero p {
+            color: var(--muted);
+            font-size: 1rem;
+            max-width: 560px;
+            margin: 0 auto;
+        }
+
+        /* ── Kort ── */
+        .card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+        }
+
+        /* ── Inputs ── */
+        .form-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+        .form-control, .form-select {
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.95rem;
+            padding: 10px 14px;
+            transition: border-color 0.15s;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(14,165,233,0.12);
+        }
+
+        /* ── Slider ── */
+        .slider-wrap { position: relative; }
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--blue);
+            height: 6px;
+            cursor: pointer;
+        }
+        .slider-val {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--blue);
+        }
+
+        /* ── Adresse autocomplete ── */
+        .adresse-wrap { position: relative; }
+        #adresse-dropdown {
+            display: none;
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0; right: 0;
+            background: white;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            z-index: 200;
+            max-height: 220px;
+            overflow-y: auto;
+        }
+        .adresse-item {
+            padding: 10px 14px;
+            font-size: 0.88rem;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.1s;
+        }
+        .adresse-item:last-child { border-bottom: none; }
+        .adresse-item:hover { background: #f0f9ff; color: var(--blue-dk); }
+
+        /* ── Vandpris felt ── */
+        .pris-badge {
+            font-size: 0.7rem;
+            background: #e0f2fe;
+            color: var(--blue-dk);
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-weight: 700;
+        }
+
+        /* ── Resultater ── */
+        .res-box {
+            border-radius: 14px;
+            padding: 20px 22px;
+            margin-bottom: 12px;
+        }
+        .res-box.savings {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            color: white;
+        }
+        .res-box.normal { background: #f8fafc; border: 1.5px solid var(--border); }
+        .res-box.blue   { background: #f0f9ff; border: 1.5px solid #bae6fd; }
+
+        .res-label {
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+            opacity: 0.75;
+            margin-bottom: 4px;
+        }
+        .res-value {
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1.1;
+        }
+        .res-sub {
+            font-size: 0.8rem;
+            opacity: 0.75;
+            margin-top: 2px;
+        }
+
+        /* ── Highlight bar ── */
+        .highlight-bar {
+            background: linear-gradient(90deg, #0ea5e9, #059669);
+            border-radius: 8px;
+            height: 6px;
+            margin-bottom: 24px;
+        }
+
+        /* ── Tomme resultater ── */
+        .res-empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--muted);
+        }
+
+        /* ── Afsnit-label ── */
+        .section-lbl {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 700;
+            color: var(--muted);
+            margin-bottom: 12px;
+        }
+
+        /* ── Footer ── */
+        footer {
+            text-align: center;
+            padding: 32px 16px;
+            color: var(--muted);
+            font-size: 0.8rem;
+            border-top: 1px solid var(--border);
+            margin-top: 40px;
+            background: white;
+        }
+        footer strong { color: var(--navy); }
+
+        /* ── Land-toggle ── */
+        .land-toggle {
+            display: inline-flex;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            background: #f8fafc;
+        }
+        .land-btn {
+            padding: 8px 18px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            color: var(--muted);
+            transition: all 0.15s;
+            letter-spacing: 0.3px;
+        }
+        .land-btn.active {
+            background: var(--blue);
+            color: white;
+        }
+        .land-btn:not(.active):hover { background: #e0f2fe; }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+    <div class="container d-flex justify-content-between align-items-center">
+        <img src="/static/logo.png" alt="AhSolution">
+        <div class="header-tagline d-none d-md-block">Idea. Solution. Execution.</div>
+        <a href="mailto:ah@ahsolution.dk" class="btn btn-sm btn-outline-secondary" style="font-size:0.8rem;">
+            <i class="fa fa-envelope me-1"></i> Kontakt os
+        </a>
+    </div>
+</header>
+
+<!-- Hero -->
+<div class="hero">
+    <span class="hero-icon">💧</span>
+    <h1 id="hero-title">Hvad koster dit vand?</h1>
+    <p id="hero-desc">Beregn din potentielle besparelse ved at installere et vandgenbrugssystem i din bilvask.</p>
+    <div class="mt-3">
+        <div class="land-toggle">
+            <button class="land-btn active" id="btn-dk" onclick="skiftLand('DK')">🇩🇰 Danmark</button>
+            <button class="land-btn" id="btn-no" onclick="skiftLand('NO')">🇳🇴 Norge</button>
+        </div>
+    </div>
+    <div class="highlight-bar mt-4" style="max-width:300px; margin: 16px auto 0;"></div>
+</div>
+
+<div class="container" style="max-width: 1060px;">
+    <div class="row g-4 align-items-start">
+
+        <!-- ── VENSTRE: Inputs ── -->
+        <div class="col-lg-5">
+            <div class="card p-4">
+
+                <!-- Kommune-dropdown -->
+                <div class="mb-4">
+                    <label class="form-label" id="lbl-adresse">Vælg kommune</label>
+                    <div class="input-group">
+                        <span class="input-group-text" style="border-radius:10px 0 0 10px; border:1.5px solid var(--border); background:#f8fafc;">
+                            <i class="fa fa-map-marker" style="color: var(--blue);"></i>
+                        </span>
+                        <select id="kommune-select" class="form-control" style="border-left:none; border-radius:0 10px 10px 0; cursor:pointer;"
+                                onchange="onKommuneValgt(this.value)">
+                            <option value="">– Vælg kommune –</option>
+                        </select>
+                    </div>
+                    <!-- Adresse-søgning (alternativ) -->
+                    <div class="mt-2">
+                        <div class="adresse-wrap">
+                            <input type="text" id="adresse-input" class="form-control form-control-sm"
+                                   placeholder="… eller søg på adresse"
+                                   autocomplete="off" style="border-radius:8px; font-size:0.82rem; color:var(--muted);">
+                            <div id="adresse-dropdown"></div>
+                        </div>
+                    </div>
+                    <div id="kommune-info" class="small mt-2" style="color: var(--muted); min-height:20px;"></div>
+                </div>
+
+                <!-- Vandpris -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label mb-0" id="lbl-vandpris">Vandpris inkl. afløb</label>
+                        <span class="pris-badge" id="pris-kilde">Manuel</span>
+                    </div>
+                    <div class="input-group">
+                        <input type="number" id="vandpris" class="form-control"
+                               value="80" min="10" max="300" step="1" onchange="beregn()">
+                        <span class="input-group-text" style="border-radius:0 10px 10px 0; border:1.5px solid var(--border);" id="lbl-pris-enhed">kr/m³</span>
+                    </div>
+                    <div class="small mt-1" style="color: var(--muted);" id="lbl-pris-hint">
+                        Inkl. drikkevand, spildevand og afledning. Typisk 60–110 kr/m³ i Danmark.
+                    </div>
+                </div>
+
+                <hr style="border-color: var(--border);">
+
+                <!-- Genbrug % -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label mb-0">Vandgenbrug</label>
+                        <span class="slider-val" id="genbrug-val">80%</span>
+                    </div>
+                    <input type="range" id="genbrug" min="50" max="95" step="5" value="80"
+                           oninput="document.getElementById('genbrug-val').textContent=this.value+'%'; beregn()">
+                    <div class="d-flex justify-content-between" style="font-size:0.65rem; color:var(--muted);">
+                        <span>50%</span><span>95%</span>
+                    </div>
+                </div>
+
+                <!-- Liter pr. bilvask -->
+                <div class="mb-4">
+                    <label class="form-label">Vandforbrug pr. bilvask</label>
+                    <div class="input-group">
+                        <input type="number" id="liter-pr-vask" class="form-control"
+                               value="400" min="50" max="2000" step="10" onchange="beregn()">
+                        <span class="input-group-text" style="border-radius:0 10px 10px 0; border:1.5px solid var(--border);">liter</span>
+                    </div>
+                    <div class="small mt-1" style="color: var(--muted);">Typisk 200–600 liter for en standard bilvask.</div>
+                </div>
+
+                <!-- Antal biler pr. år -->
+                <div class="mb-2">
+                    <label class="form-label">Antal bilvask pr. år</label>
+                    <div class="input-group">
+                        <input type="number" id="vask-pr-aar" class="form-control"
+                               value="" min="0" max="1000000" step="100"
+                               placeholder="F.eks. 50.000"
+                               oninput="beregn()">
+                        <span class="input-group-text" style="border-radius:0 10px 10px 0; border:1.5px solid var(--border);">vask/år</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ── HØJRE: Resultater ── -->
+        <div class="col-lg-7">
+            <div class="card p-4">
+
+                <div id="res-empty" class="res-empty">
+                    <i class="fa fa-calculator fa-3x mb-3 d-block" style="color:#cbd5e1;"></i>
+                    <div class="fw-bold mb-1" style="color:var(--muted);" id="res-empty-title">Indtast antal bilvask</div>
+                    <div class="small" id="res-empty-sub">Udfyld felterne til venstre for at se din besparelse</div>
+                </div>
+
+                <div id="res-content" style="display:none;">
+
+                    <!-- Highlight: Besparelse -->
+                    <div class="res-box savings mb-4">
+                        <div class="res-label">Årlig besparelse</div>
+                        <div class="res-value" id="res-besparelse">–</div>
+                        <div class="res-sub" id="res-besparelse-sub">pr. år ved <span id="res-genbrug-pct">80</span>% genbrug</div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <div class="res-box blue">
+                                <div class="res-label">Vand sparet</div>
+                                <div class="res-value" style="font-size:1.5rem; color: var(--blue);" id="res-sparet-m3">–</div>
+                                <div class="res-sub" style="color:var(--muted);">m³ pr. år</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="res-box blue">
+                                <div class="res-label" id="lbl-sparet-pr-vask">Sparet pr. vask</div>
+                                <div class="res-value" style="font-size:1.5rem; color: var(--blue);" id="res-sparet-pr-vask">–</div>
+                                <div class="res-sub" style="color:var(--muted);" id="lbl-pr-vask-enhed">kr. pr. bilvask</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sammenligning: Uden vs. Med -->
+                    <div class="section-lbl">Vandforbrug: Før og efter</div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <div class="res-box normal">
+                                <div class="res-label">Uden genbrug</div>
+                                <div style="font-size:1.2rem; font-weight:800; color:var(--text);" id="res-forbrug-m3">–</div>
+                                <div class="res-sub" style="color:var(--muted);" id="res-udgift-uden">– kr/år</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="res-box normal" style="border-color:#bbf7d0;">
+                                <div class="res-label" style="color: var(--green);">Med genbrug</div>
+                                <div style="font-size:1.2rem; font-weight:800; color: var(--green);" id="res-forbrug-med">–</div>
+                                <div class="res-sub" style="color:var(--muted);" id="res-udgift-med">– kr/år</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payback-note -->
+                    <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:12px 16px;">
+                        <div class="d-flex gap-2 align-items-start">
+                            <i class="fa fa-lightbulb-o mt-1" style="color:#f59e0b;"></i>
+                            <div>
+                                <div style="font-size:0.82rem; font-weight:700; color:#92400e;" id="lbl-payback-title">Vil du vide mere?</div>
+                                <div style="font-size:0.78rem; color:#78350f;" id="lbl-payback-body">
+                                    Et vandgenbrugssystem fra AhSolution kan typisk tilbagebetale sig selv på
+                                    <strong id="res-payback">–</strong>. Kontakt os for et konkret tilbud.
+                                </div>
+                                <a href="mailto:ah@ahsolution.dk" class="btn btn-sm mt-2 fw-bold"
+                                   style="background:#f59e0b; color:white; border:none; font-size:0.78rem; border-radius:8px;" id="btn-tilbud">
+                                    <i class="fa fa-envelope me-1"></i> <span id="lbl-tilbud-btn">Få et tilbud</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Disclaimer -->
+            <div class="small mt-3 px-2" style="color: var(--muted);">
+                <i class="fa fa-info-circle me-1"></i>
+                <span id="lbl-disclaimer">Beregningen er vejledende. Vandpriser hentes fra DAWA og er baseret på kommunale gennemsnit.
+                Kontakt dit lokale vandværk for den præcise pris. Besparelsen afhænger af det faktiske vandgenbrugssystem.</span>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Footer -->
+<footer>
+    <strong>AhSolution ApS</strong> · CVR: 45081125 · ah@ahsolution.dk · +45 23 81 72 72<br>
+    <span style="color:#cbd5e1;">Tingbakken 39, 8883 Gjern · Idea. Solution. Execution.</span>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+/* ─────────────────────────────────────────────────────────────
+   VANDPRIS-DATA – Danmark (opdateret april 2026)
+   Variabelpris inkl. drikkevand + spildevand + moms  (DKK/m³)
+   ★ = bekræftet fra officielle takstblade 2026
+   Næste opdatering: april 2027
+───────────────────────────────────────────────────────────── */
+const VANDPRISER_DK = {
+    "København":          50, "Frederiksberg":       50,  // ★ HOFOR 2026: 49,57
+    "Aarhus":             59, "Odense":              66,  // ★ AarhusVand 58,55 / VandCenter Syd 65,98
+    "Aalborg":            74, "Esbjerg":             82,
+    "Randers":            78, "Kolding":             86,
+    "Vejle":              80, "Horsens":             88,
+    "Silkeborg":          85, "Fredericia":          93,
+    "Næstved":            91, "Helsingør":           98,
+    "Hillerød":           94, "Roskilde":            87,
+    "Slagelse":           95, "Herning":             77,
+    "Viborg":             79, "Høje-Taastrup":       92,
+    "Gladsaxe":           88, "Lyngby-Taarbæk":     90,
+    "Gentofte":           86, "Rudersdal":           93,
+    "Herlev":             85, "Ikast-Brande":        81,
+    "Hedensted":          83, "Billund":             88,
+    "Frederikshavn":      83, "Hjørring":            85,
+    "Holstebro":          76, "Skive":               64,  // ★ Skive Vand 2025: 64,34
+    "Thisted":            84, "Struer":              86,
+    "Ringkøbing-Skjern":  79, "Favrskov":            85,
+    "Skanderborg":        83, "Odder":               87,
+    "Norddjurs":          81, "Syddjurs":            83,
+    "Kalundborg":         92, "Sorø":                91,
+    "Lejre":              88, "Gribskov":            97,
+    "Furesø":             91, "Allerød":             90,
+    "Ballerup":           89, "Brøndby":             87,
+    "Greve":              91, "Køge":                92,
+    "Sønderborg":         84, "Aabenraa":            86,
+    "Haderslev":          91, "Tønder":              88,  // ★ PROVAS 2026: 91,45
+    "Faaborg-Midtfyn":    87, "Assens":              90,
+    "Middelfart":         88, "Svendborg":           90,
+    "Rebild":             81, "Vesthimmerlands":     83,
+    "Jammerbugt":         85, "Lemvig":              85,
+    "Fredensborg":        68,
+};
+
+/* ─────────────────────────────────────────────────────────────
+   VANNPRIS-DATA – Norge (opdateret april 2026)
+   Variabelt forbruksgebyr inkl. vann + avløp + 15% mva (NOK/m³)
+   NB: Mva ble redusert fra 25% til 15% fra 1. juli 2025
+   ★ = bekreftet fra offisielle gebyrregulativ 2026
+   Neste oppdatering: april 2027
+───────────────────────────────────────────────────────────── */
+const VANDPRISER_NO = {
+    "Oslo":               83, "Bergen":              58,  // ★ Oslo 2026: 49,71+33,13=82,84
+    "Trondheim":          49, "Stavanger":           26,  // ★ Trondheim 2026: 20,17+28,38=48,55 / ★ Stavanger 2026: 22,2 inkl. mva
+    "Kristiansand":       65, "Tromsø":              76,
+    "Drammen":            93, "Fredrikstad":         72,  // ★ Drammen 2026: 35,02+58,45=93,47
+    "Sarpsborg":          68, "Sandnes":             32,
+    "Bodø":               80, "Ålesund":             62,
+    "Skien":              72, "Sandefjord":          68,
+    "Tønsberg":           66, "Moss":                74,
+    "Haugesund":          60, "Molde":               68,
+    "Lillehammer":        70, "Gjøvik":              65,
+    "Hamar":              66, "Arendal":             72,
+    "Grimstad":           70, "Larvik":              66,
+    "Horten":             68, "Halden":              82,
+    "Steinkjer":          72, "Namsos":              78,
+    "Alta":               84, "Harstad":             80,
+    "Narvik":             74, "Rana":                74,
+    "Kongsberg":          70, "Notodden":            74,
+    "Porsgrunn":          76, "Bærum":               65,
+    "Asker":              70, "Lillestrøm":         137,  // ★ Asker 2026: 34,66+35,82=70,48 / ★ Lillestrøm 2025: 118,9 ekskl. mva
+    "Nordre Follo":       70, "Nesodden":            72,
+    "Frogn":              74, "Ås":                  68,
+    "Nittedal":           70, "Ullensaker":          64,
+    "Eidsvoll":           68, "Nannestad":           70,
+    "Elverum":            72, "Ringsaker":           68,
+    "Stange":             70, "Ringerike":           66,
+    "Lørenskog":          78, "Vestby":              68,
+};
+
+/* ─────────────────────────────────────────────────────────────
+   TEKSTER – dansk / norsk
+───────────────────────────────────────────────────────────── */
+const TEKST = {
+    DK: {
+        lang:          'da',
+        heroTitle:     'Hvad koster dit vand?',
+        heroDesc:      'Beregn din potentielle besparelse ved at installere et vandgenbrugssystem i din bilvask.',
+        lblAdresse:    'Din adresse',
+        adrPlaceholder:'Skriv adresse, f.eks. Tingbakken 39, 8883 Gjern',
+        lblVandpris:   'Vandpris inkl. afløb',
+        prisEnhed:     'kr/m³',
+        prisHint:      'Inkl. drikkevand, spildevand og afledning. Typisk 50–100 kr/m³ i Danmark (store byer er ofte billigst).',
+        defaultPris:   70,
+        selectPlaceholder: '– Vælg kommune –',
+        adressePlaceholder: '… eller søg på adresse',
+        lblAdresse: 'Vælg kommune',
+        kommuneFundet: (navn, pris) => `<i class="fa fa-check-circle me-1" style="color:#059669;"></i>Vandpris for <strong>${navn} Kommune</strong>: <strong>${pris} kr/m³</strong> <span style="opacity:0.7;">(bekræftet takstblad 2026)</span>`,
+        kommuneManuel: navn => `<i class="fa fa-info-circle me-1" style="color:var(--blue);"></i><strong>${navn} Kommune</strong> – Ingen prisdata. Tjek din lokale vandforsyning.`,
+        kommuneBadge:  navn => navn + ' Kommune',
+        resEmptyTitle: 'Indtast antal bilvask',
+        resEmptySub:   'Udfyld felterne til venstre for at se din besparelse',
+        lblSparetPrVask: 'Sparet pr. vask',
+        prVaskEnhed:   'kr. pr. bilvask',
+        paybackTitle:  'Vil du vide mere?',
+        paybackBody1:  'Et vandgenbrugssystem fra AhSolution (ca. 370.000 kr inkl. installation) kan typisk tilbagebetale sig selv på ',
+        paybackBody2:  '. Kontakt os for et konkret tilbud.',
+        systemPris:    370000,
+        paybackBtn:    'Få et tilbud',
+        disclaimer:    'Beregningen er vejledende. Priser er hentet fra officielle kommunale takstblade (opdateret april 2026) og opdateres ca. hvert år. Kontakt dit lokale vandværk for den præcise pris. Besparelsen afhænger af det valgte vandgenbrugssystem.',
+        locale:        'da-DK',
+        perYear:       '/år',
+        year:          'år',
+        approx:        'ca.',
+        shortTime:     'kort tid',
+    },
+    NO: {
+        lang:          'nb',
+        heroTitle:     'Hva koster vannet ditt?',
+        heroDesc:      'Beregn din potensielle besparelse ved å installere et vanngjenbrukssystem i bilvasken din.',
+        lblAdresse:    'Din adresse',
+        adrPlaceholder:'Skriv adresse, f.eks. Storgata 1, 0155 Oslo',
+        lblVandpris:   'Vannpris inkl. avløp',
+        prisEnhed:     'kr/m³',
+        prisHint:      'Inkl. drikkevann, avløp og 15% mva. Typisk 25–140 kr/m³ i Norge – store variasjoner mellom kommuner. Prisene stiger kraftig frem mot 2028.',
+        defaultPris:   70,
+        selectPlaceholder: '– Velg kommune –',
+        adressePlaceholder: '… eller søk på adresse',
+        lblAdresse: 'Velg kommune',
+        kommuneFundet: (navn, pris) => `<i class="fa fa-check-circle me-1" style="color:#059669;"></i>Vannpris for <strong>${navn} kommune</strong>: <strong>${pris} kr/m³</strong> <span style="opacity:0.7;">(bekreftet gebyrregulativ 2026)</span>`,
+        kommuneManuel: navn => `<i class="fa fa-info-circle me-1" style="color:var(--blue);"></i><strong>${navn} kommune</strong> – Ingen prisdata. Sjekk din lokale vannforsyning.`,
+        kommuneBadge:  navn => navn + ' kommune',
+        resEmptyTitle: 'Skriv inn antall bilvask',
+        resEmptySub:   'Fyll ut feltene til venstre for å se din besparelse',
+        lblSparetPrVask: 'Spart pr. vask',
+        prVaskEnhed:   'kr. pr. bilvask',
+        paybackTitle:  'Vil du vite mer?',
+        paybackBody1:  'Et vanngjenbrukssystem fra AhSolution (ca. 550.000 kr inkl. installasjon) kan typisk betale seg selv tilbake på ',
+        paybackBody2:  '. Kontakt oss for et konkret tilbud.',
+        systemPris:    550000,
+        paybackBtn:    'Få et tilbud',
+        disclaimer:    'Beregningen er veiledende. Priser er hentet fra offisielle kommunale gebyrregulativ (oppdatert april 2026) og oppdateres ca. hvert år. Merk: Norske vann- og avløpsgebyrer øker kraftig – kontakt din lokale vannforsyning for nøyaktig pris. Besparelsen avhenger av det valgte vanngjenbrukssystemet.',
+        locale:        'nb-NO',
+        perYear:       '/år',
+        year:          'år',
+        approx:        'ca.',
+        shortTime:     'kort tid',
+    }
+};
+
+/* ─────────────────────────────────────────────────────────────
+   TILSTAND
+───────────────────────────────────────────────────────────── */
+let aktivtLand = 'DK';
+let adresseTimer = null;
+const input    = document.getElementById('adresse-input');
+const dropdown = document.getElementById('adresse-dropdown');
+
+/* ── DROPDOWN: Udfyld kommuner for aktivt land ── */
+function udfyldKommuneDropdown() {
+    const t      = TEKST[aktivtLand];
+    const priser = aktivtLand === 'DK' ? VANDPRISER_DK : VANDPRISER_NO;
+    const select = document.getElementById('kommune-select');
+    const sorted = Object.keys(priser).sort((a, b) => a.localeCompare(b, aktivtLand === 'DK' ? 'da' : 'nb'));
+    select.innerHTML = `<option value="">${t.selectPlaceholder}</option>` +
+        sorted.map(navn => `<option value="${navn}">${navn}</option>`).join('');
+}
+
+function onKommuneValgt(navn) {
+    if (!navn) {
+        const t = TEKST[aktivtLand];
+        document.getElementById('kommune-info').innerHTML = '';
+        document.getElementById('pris-kilde').textContent = aktivtLand === 'DK' ? 'Manuel' : 'Manuell';
+        document.getElementById('pris-kilde').style.background = '';
+        document.getElementById('pris-kilde').style.color = '';
+        document.getElementById('vandpris').value = t.defaultPris;
+        input.value = '';
+        beregn();
+        return;
+    }
+    input.value = '';
+    visKommune(navn);
+}
+
+/* ── LAND-SKIFT ── */
+function skiftLand(land) {
+    aktivtLand = land;
+    const t = TEKST[land];
+
+    // Toggle buttons
+    document.getElementById('btn-dk').classList.toggle('active', land === 'DK');
+    document.getElementById('btn-no').classList.toggle('active', land === 'NO');
+
+    // html lang
+    document.getElementById('html-root').lang = t.lang;
+
+    // Tekster
+    document.getElementById('hero-title').textContent      = t.heroTitle;
+    document.getElementById('hero-desc').textContent       = t.heroDesc;
+    document.getElementById('lbl-adresse').textContent     = t.lblAdresse;
+    document.getElementById('lbl-vandpris').textContent    = t.lblVandpris;
+    document.getElementById('lbl-pris-enhed').textContent  = t.prisEnhed;
+    document.getElementById('lbl-pris-hint').textContent   = t.prisHint;
+    document.getElementById('lbl-sparet-pr-vask').textContent = t.lblSparetPrVask;
+    document.getElementById('lbl-pr-vask-enhed').textContent  = t.prVaskEnhed;
+    document.getElementById('lbl-payback-title').textContent  = t.paybackTitle;
+    document.getElementById('lbl-payback-body').innerHTML  =
+        t.paybackBody1 + '<strong id="res-payback">–</strong>' + t.paybackBody2;
+    document.getElementById('lbl-tilbud-btn').textContent  = t.paybackBtn;
+    document.getElementById('res-empty-title').textContent = t.resEmptyTitle;
+    document.getElementById('res-empty-sub').textContent   = t.resEmptySub;
+    document.getElementById('lbl-disclaimer').textContent  = t.disclaimer;
+    input.placeholder = t.adressePlaceholder;
+
+    // Genopbyg dropdown + reset
+    udfyldKommuneDropdown();
+    document.getElementById('kommune-select').value = '';
+    input.value = '';
+    document.getElementById('kommune-info').innerHTML = '';
+    document.getElementById('pris-kilde').textContent = aktivtLand === 'DK' ? 'Manuel' : 'Manuell';
+    document.getElementById('pris-kilde').style.background = '';
+    document.getElementById('pris-kilde').style.color = '';
+    document.getElementById('vandpris').value = t.defaultPris;
+
+    beregn();
+}
+
+/* ── ADRESSE AUTOCOMPLETE ── */
+input.addEventListener('input', function () {
+    clearTimeout(adresseTimer);
+    const q = this.value.trim();
+    if (q.length < 3) { dropdown.style.display = 'none'; return; }
+    adresseTimer = setTimeout(() => fetchSuggestions(q), 280);
+});
+
+input.addEventListener('blur', function () {
+    setTimeout(() => { dropdown.style.display = 'none'; }, 200);
+});
+
+async function fetchSuggestions(q) {
+    try {
+        let items;
+        if (aktivtLand === 'DK') {
+            const url = `https://api.dataforsyningen.dk/adresser/autocomplete?q=${encodeURIComponent(q)}&per_side=7&caretpos=${q.length}`;
+            const res  = await fetch(url);
+            const data = await res.json();
+            items = data.map(d => ({ tekst: d.tekst, id: d.adresse?.id || null, kommunenavn: null }));
+        } else {
+            const url = `https://ws.geonorge.no/adresser/v1/sok?sok=${encodeURIComponent(q)}&treffPerSide=7&fuzzy=true`;
+            const res  = await fetch(url);
+            const data = await res.json();
+            items = (data.adresser || []).map(a => ({
+                tekst: `${a.adressenavn} ${a.husnummer || ''}${a.husbokstav || ''}, ${a.postnummer} ${a.poststed}`.trim(),
+                id: null,
+                kommunenavn: a.kommunenavn || null,
+            }));
+        }
+        showDropdown(items);
+    } catch(e) { dropdown.style.display = 'none'; }
+}
+
+function showDropdown(items) {
+    if (!items || items.length === 0) { dropdown.style.display = 'none'; return; }
+    dropdown.innerHTML = items.map((item, i) =>
+        `<div class="adresse-item"
+              data-idx="${i}"
+              data-tekst="${item.tekst.replace(/"/g,'&quot;')}"
+              data-id="${item.id || ''}"
+              data-kommunenavn="${item.kommunenavn || ''}">
+            <i class="fa fa-map-marker me-2" style="color:var(--blue); opacity:0.6;"></i>${item.tekst}
+         </div>`
+    ).join('');
+    dropdown.querySelectorAll('.adresse-item').forEach(el => {
+        el.addEventListener('mousedown', function () {
+            input.value = this.dataset.tekst;
+            dropdown.style.display = 'none';
+            if (aktivtLand === 'DK' && this.dataset.id) {
+                lookupKommuneDK(this.dataset.id);
+            } else if (aktivtLand === 'NO' && this.dataset.kommunenavn) {
+                visKommune(this.dataset.kommunenavn);
+            }
+        });
+    });
+    dropdown.style.display = 'block';
+}
+
+/* ── DK: Slå kommune op via DAWA ── */
+async function lookupKommuneDK(adresseId) {
+    try {
+        const url  = `https://api.dataforsyningen.dk/adresser/${adresseId}?struktur=nestet`;
+        const res  = await fetch(url);
+        const data = await res.json();
+        const navn = data?.adgangsadresse?.vejstykke?.kommune?.navn;
+        if (navn) visKommune(navn);
+    } catch(e) {}
+}
+
+/* ── Vis kommune og sæt pris ── */
+function visKommune(navn) {
+    const t      = TEKST[aktivtLand];
+    const priser = aktivtLand === 'DK' ? VANDPRISER_DK : VANDPRISER_NO;
+    const info   = document.getElementById('kommune-info');
+    const kilde  = document.getElementById('pris-kilde');
+    const select = document.getElementById('kommune-select');
+    const pris   = priser[navn];
+
+    // Sync dropdown hvis kommunen findes
+    if (select.querySelector(`option[value="${navn}"]`)) {
+        select.value = navn;
+    }
+
+    if (pris) {
+        document.getElementById('vandpris').value = pris;
+        kilde.textContent = t.kommuneBadge(navn);
+        kilde.style.background = '#dcfce7';
+        kilde.style.color = '#166534';
+        info.innerHTML = t.kommuneFundet(navn, pris);
+    } else {
+        kilde.textContent = aktivtLand === 'DK' ? 'Manuel' : 'Manuell';
+        kilde.style.background = '';
+        kilde.style.color = '';
+        info.innerHTML = t.kommuneManuel(navn);
+    }
+    beregn();
+}
+
+/* ── BEREGNING ── */
+function beregn() {
+    const t              = TEKST[aktivtLand];
+    const vandpris       = parseFloat(document.getElementById('vandpris').value)       || t.defaultPris;
+    const genbrug_pct    = parseFloat(document.getElementById('genbrug').value)         || 80;
+    const liter_pr_vask  = parseFloat(document.getElementById('liter-pr-vask').value)   || 400;
+    const vask_pr_aar    = parseFloat(document.getElementById('vask-pr-aar').value)     || 0;
+
+    document.getElementById('res-genbrug-pct').textContent = genbrug_pct;
+
+    if (vask_pr_aar <= 0) {
+        document.getElementById('res-empty').style.display   = '';
+        document.getElementById('res-content').style.display = 'none';
+        return;
+    }
+    document.getElementById('res-empty').style.display   = 'none';
+    document.getElementById('res-content').style.display = '';
+
+    // Beregninger
+    const total_liter    = vask_pr_aar * liter_pr_vask;
+    const total_m3       = total_liter / 1000;
+    const sparet_liter   = total_liter * (genbrug_pct / 100);
+    const sparet_m3      = sparet_liter / 1000;
+    const forbrug_med_m3 = total_m3 - sparet_m3;
+
+    const udgift_uden    = total_m3       * vandpris;
+    const udgift_med     = forbrug_med_m3 * vandpris;
+    const besparelse     = sparet_m3      * vandpris;
+    const sparet_pr_vask = (liter_pr_vask / 1000) * (genbrug_pct / 100) * vandpris;
+
+    // Payback-estimat: DK 370.000 kr, NO 550.000 NOK
+    const payback_aar = besparelse > 0 ? Math.ceil(t.systemPris / besparelse) : null;
+
+    // Formatter
+    const fmt  = n => n.toLocaleString(t.locale, {maximumFractionDigits: 0});
+    const fmtK = n => n >= 1000
+        ? (n / 1000).toLocaleString(t.locale, {maximumFractionDigits: 1}) + '.000 kr'
+        : fmt(n) + ' kr';
+
+    // Opdater DOM
+    document.getElementById('res-besparelse').textContent      = fmtK(besparelse);
+    document.getElementById('res-sparet-m3').textContent       = fmt(sparet_m3) + ' m³';
+    document.getElementById('res-sparet-pr-vask').textContent  = sparet_pr_vask.toLocaleString(t.locale, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' kr';
+    document.getElementById('res-forbrug-m3').textContent      = fmt(total_m3) + ' m³/' + t.year;
+    document.getElementById('res-udgift-uden').textContent     = fmtK(udgift_uden) + t.perYear;
+    document.getElementById('res-forbrug-med').textContent     = fmt(forbrug_med_m3) + ' m³/' + t.year;
+    document.getElementById('res-udgift-med').textContent      = fmtK(udgift_med) + t.perYear;
+
+    const paybackEl = document.getElementById('res-payback');
+    if (paybackEl && payback_aar) {
+        paybackEl.textContent = `${t.approx} ${payback_aar} ${t.year}`;
+    } else if (paybackEl) {
+        paybackEl.textContent = t.shortTime;
+    }
+}
+
+// Live opdatering på input
+document.getElementById('vandpris').addEventListener('input', beregn);
+document.getElementById('liter-pr-vask').addEventListener('input', beregn);
+
+// Initialisér dropdown og auto-aktivér land fra URL-parameter (?land=no)
+(function() {
+    udfyldKommuneDropdown(); // DK er standard
+    const params = new URLSearchParams(window.location.search);
+    if ((params.get('land') || '').toLowerCase() === 'no') {
+        skiftLand('NO');
+    }
+})();
+</script>
+</body>
+</html>

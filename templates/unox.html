@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNO-X | AhSolution ERP</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/font-awesome.min.css">
+    <style>
+        :root {
+            --accent:    #0ea5e9;
+            --accent-dk: #0284c7;
+            --bg-light:  #f0f9ff;
+            --text-dark: #1e293b;
+            --text-muted:#64748b;
+            --border:    #e2e8f0;
+        }
+        body { background-color: var(--bg-light); color: var(--text-dark); font-family: 'Inter', system-ui, -apple-system, sans-serif; padding-bottom: 60px; }
+        .navbar { background: #fff; border-bottom: 1px solid var(--border); padding: 16px 0; }
+        .navbar-brand img { height: 48px; }
+
+        .unox-header {
+            background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%);
+            color: white;
+            border-radius: 14px;
+            padding: 24px 28px;
+            margin-bottom: 24px;
+        }
+        .card { background: #fff; border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.04); margin-bottom: 20px; }
+
+        .periode-item {
+            border: 1px solid var(--border);
+            border-left: 4px solid #cbd5e1;
+            border-radius: 8px;
+            background: white;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            transition: box-shadow 0.15s;
+        }
+        .periode-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .periode-item.faktureret { border-left-color: #22c55e; background: #f0fdf4; }
+        .periode-item.snart { border-left-color: #f59e0b; }
+        .periode-item.forfald { border-left-color: #dc2626; }
+
+        .indkoeb-item {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: white;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+        }
+        .indkoeb-item.faktureret { opacity: 0.55; background: #f8fafc; }
+
+        .btn-unox { background-color: var(--accent); border-color: var(--accent); color: white; }
+        .btn-unox:hover { background-color: var(--accent-dk); border-color: var(--accent-dk); color: white; }
+        .btn-xs { padding: 0.15rem 0.5rem; font-size: 0.72rem; line-height: 1.4; border-radius: 5px; }
+        .section-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); font-weight: 700; }
+        .form-label-xs { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); font-weight: 700; margin-bottom: 3px; display: block; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar sticky-top mb-4">
+        <div class="container d-flex justify-content-between align-items-center">
+            <a href="/" class="navbar-brand"><img src="/static/logo.png" alt="AhSolution Logo"></a>
+            <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:2px; color:#0ea5e9; font-weight:700;" class="d-none d-md-block">UNO-X Aftale</div>
+            <div class="d-flex gap-2 align-items-center">
+                <a href="/admin" class="btn btn-sm btn-outline-secondary" style="font-size:0.8rem;">
+                    <i class="fa fa-arrow-left me-1"></i> Dashboard
+                </a>
+                <a href="/logout" class="btn btn-sm btn-outline-secondary" style="font-size:0.8rem;">Log ud</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <!-- ── Header ── -->
+        <div class="unox-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <div style="font-size:0.7rem; opacity:0.8; text-transform:uppercase; letter-spacing:2px;">Konsulentaftale</div>
+                    <div style="font-size:1.6rem; font-weight:800; line-height:1.2;">UNO-X</div>
+                    <div style="font-size:0.85rem; opacity:0.85; margin-top:6px;">
+                        {{ ind.timer_pr_periode|int }} timer pr. periode
+                        {% if ind.timepris > 0 %} · {{ "{:,.0f}".format(ind.timepris) }} {{ ind.valuta }}/t{% endif %}
+                        · Start {{ ind.start_dato }}
+                    </div>
+                </div>
+                <div class="col-auto text-end">
+                    <button class="btn btn-sm fw-bold" style="background:rgba(255,255,255,0.2); color:white; border:1px solid rgba(255,255,255,0.4);"
+                            data-bs-toggle="collapse" data-bs-target="#unox-indstillinger">
+                        <i class="fa fa-cog me-1"></i> Indstillinger
+                    </button>
+                </div>
+            </div>
+
+            <!-- Indstillinger (collapsible) -->
+            <div class="collapse mt-3" id="unox-indstillinger">
+                <div style="background:rgba(255,255,255,0.15); border-radius:8px; padding:16px;">
+                    <form action="/unox/indstillinger" method="POST">
+                        <div class="row g-2">
+                            <div class="col-sm-3">
+                                <label class="form-label-xs" style="color:rgba(255,255,255,0.8);">Timer pr. periode</label>
+                                <input type="number" name="timer_pr_periode" class="form-control form-control-sm"
+                                       value="{{ ind.timer_pr_periode }}" step="0.5" min="1">
+                            </div>
+                            <div class="col-sm-3">
+                                <label class="form-label-xs" style="color:rgba(255,255,255,0.8);">Timepris ({{ ind.valuta }})</label>
+                                <input type="number" name="timepris" class="form-control form-control-sm"
+                                       value="{{ ind.timepris }}" step="0.01" min="0">
+                            </div>
+                            <div class="col-sm-3">
+                                <label class="form-label-xs" style="color:rgba(255,255,255,0.8);">Startdato</label>
+                                <input type="date" name="start_dato" class="form-control form-control-sm"
+                                       value="{{ ind.start_dato | dinero_dato }}">
+                            </div>
+                            <div class="col-sm-3 d-flex align-items-end">
+                                <button type="submit" class="btn btn-sm fw-bold w-100"
+                                        style="background:white; color:#0ea5e9;">Gem indstillinger</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+
+            <!-- ── Venstre: Faktureringsperioder ── -->
+            <div class="col-lg-6">
+                <div class="card p-4">
+                    <div class="fw-bold mb-1" style="color: #0ea5e9; font-size:0.95rem;">Faktureringsplan</div>
+                    <div class="small mb-3" style="color: var(--text-muted);">
+                        {{ ind.timer_pr_periode|int }} timer pr. 14 dage
+                        {% if ind.timepris > 0 %}
+                        · <strong>{{ "{:,.0f}".format(ind.timer_pr_periode * ind.timepris) }} {{ ind.valuta }}</strong> pr. periode
+                        {% endif %}
+                    </div>
+
+                    {% for p in perioder %}
+                    {% set cls = 'faktureret' if p.faktureret else ('forfald' if p.dage_til <= 0 else ('snart' if p.dage_til <= 3 else '')) %}
+                    <div class="periode-item {{ cls }}">
+                        <div class="d-flex justify-content-between align-items-center gap-2">
+                            <div style="min-width:0;">
+                                <div class="small fw-bold" style="color: var(--text-dark);">
+                                    {{ p.start_str }} → {{ p.slut_str }}
+                                    {% if p.faktureret %}
+                                        <span class="badge ms-1" style="background:#22c55e; font-size:0.55rem;">FAKTURERET</span>
+                                    {% elif p.dage_til <= 0 %}
+                                        <span class="badge ms-1" style="background:#dc2626; font-size:0.55rem;">FORFALD</span>
+                                    {% elif p.dage_til <= 3 %}
+                                        <span class="badge ms-1" style="background:#f59e0b; font-size:0.55rem;">{{ p.dage_til }} DAGE</span>
+                                    {% endif %}
+                                </div>
+                                <div style="font-size:0.72rem; color: var(--text-muted);">
+                                    {% if p.faktureret %}
+                                        Faktureret {{ p.faktureret_dato }}
+                                    {% else %}
+                                        Forfald {{ p.slut_str }}
+                                    {% endif %}
+                                    {% if ind.timepris > 0 %}
+                                        · {{ "{:,.0f}".format(ind.timer_pr_periode * ind.timepris) }} {{ ind.valuta }}
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="flex-shrink-0">
+                                {% if p.faktureret %}
+                                <form action="/unox/periode/marker" method="POST">
+                                    <input type="hidden" name="key" value="{{ p.key }}">
+                                    <input type="hidden" name="handling" value="annuller">
+                                    <button type="submit" class="btn btn-xs btn-outline-secondary">Fortryd</button>
+                                </form>
+                                {% else %}
+                                <form action="/unox/periode/marker" method="POST">
+                                    <input type="hidden" name="key" value="{{ p.key }}">
+                                    <input type="hidden" name="handling" value="marker">
+                                    <button type="submit" class="btn btn-xs btn-unox">Marker faktureret</button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    {% if not perioder %}
+                    <div class="text-center py-4" style="color: var(--text-muted);">
+                        <div class="small">Ingen perioder fundet. Tjek startdato i Indstillinger.</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- ── Højre: Indkøb ── -->
+            <div class="col-lg-6">
+                <div class="card p-4">
+                    <div class="fw-bold mb-1" style="color: #0ea5e9; font-size:0.95rem;">Indkøb for UNO-X</div>
+                    <div class="small mb-3" style="color: var(--text-muted);">Udgifter der skal refunderes</div>
+
+                    <!-- Tilføj indkøb -->
+                    <div class="p-3 rounded mb-3" style="background:#f0f9ff; border:1px solid #bae6fd;">
+                        <div class="section-label mb-2">Registrér nyt indkøb</div>
+                        <form action="/unox/indkoeb/tilfoej" method="POST">
+                            <div class="row g-2 mb-2">
+                                <div class="col-12">
+                                    <label class="form-label-xs">Beskrivelse</label>
+                                    <input type="text" name="beskrivelse" class="form-control form-control-sm"
+                                           placeholder="Hvad blev købt?" required>
+                                </div>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-5">
+                                    <label class="form-label-xs">Beløb ({{ ind.valuta }})</label>
+                                    <input type="number" name="beloeb" class="form-control form-control-sm"
+                                           placeholder="0.00" step="0.01" min="0" required>
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label-xs">Dato</label>
+                                    <input type="date" name="dato" class="form-control form-control-sm" value="{{ now_date }}">
+                                </div>
+                                <div class="col-3 d-flex align-items-end">
+                                    <button type="submit" class="btn btn-sm btn-unox w-100 fw-bold">
+                                        <i class="fa fa-plus"></i> Tilføj
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Indkøbsliste -->
+                    {% set ufakt = namespace(total=0) %}
+                    {% for k in indkoeb %}{% if not k.faktureret %}{% set ufakt.total = ufakt.total + k.beloeb|float %}{% endif %}{% endfor %}
+
+                    {% if indkoeb %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="section-label mb-0">Indkøbsoversigt</div>
+                        <div class="small fw-bold" style="color: #0ea5e9;">
+                            Ufaktureret: {{ "{:,.0f}".format(ufakt.total) }} {{ ind.valuta }}
+                        </div>
+                    </div>
+
+                    {% for k in indkoeb|reverse %}
+                    <div class="indkoeb-item {{ 'faktureret' if k.faktureret }}">
+                        <div class="d-flex justify-content-between align-items-center gap-2">
+                            <div style="min-width:0;">
+                                <div class="small fw-bold text-truncate {{ 'text-muted' if k.faktureret }}">
+                                    {{ k.beskrivelse }}
+                                    {% if k.faktureret %}
+                                        <span class="badge ms-1" style="background:#22c55e; font-size:0.55rem;">FAKTURERET</span>
+                                    {% endif %}
+                                </div>
+                                <div style="font-size:0.72rem; color: var(--text-muted);">
+                                    {{ k.dato }}
+                                    {% if k.faktureret and k.faktureret_dato %} · Faktureret {{ k.faktureret_dato }}{% endif %}
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                <span class="fw-bold" style="font-size:0.85rem; white-space:nowrap;">
+                                    {{ "{:,.0f}".format(k.beloeb|float) }} {{ ind.valuta }}
+                                </span>
+                                <a href="/unox/indkoeb/marker/{{ k.id }}"
+                                   class="btn btn-xs {{ 'btn-outline-secondary' if k.faktureret else 'btn-unox' }}">
+                                    {{ 'Fortryd' if k.faktureret else 'Faktureret' }}
+                                </a>
+                                <a href="/unox/indkoeb/slet/{{ k.id }}"
+                                   onclick="return confirm('Slet indkøb?')"
+                                   class="btn btn-xs btn-outline-danger">✕</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    {% else %}
+                    <div class="text-center py-5" style="color: var(--text-muted);">
+                        <i class="fa fa-shopping-cart fa-2x mb-2 d-block" style="color:#cbd5e1;"></i>
+                        <div class="small">Ingen indkøb registreret endnu</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

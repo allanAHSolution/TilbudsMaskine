@@ -1,0 +1,21 @@
+{
+    "indstillinger": {
+        "timer": 20,
+        "timepris": 700,
+        "provision_pct": 5,
+        "valuta": "SEK"
+    },
+    "salg": [
+        {
+            "id": "1075a26a-f412-4739-a96c-0d1b930e3a35",
+            "dato": "01-04-2026",
+            "beskrivelse": "2 stk Bildusjen Lillehammer + Vestby",
+            "antal": 2.0,
+            "enhedspris": 3529000.0,
+            "provision_pct": 5.0,
+            "valuta": "SEK"
+        }
+    ],
+    "provision_faktureret": {},
+    "retainer_faktureret": {}
+}

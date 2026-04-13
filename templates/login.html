@@ -47,8 +47,8 @@
     <div class="login-card text-center">
         <img src="/static/logo.png" alt="AhSolution Logo" style="height: 52px; margin-bottom: 32px;">
 
-        <div class="fw-bold mb-1" style="color: var(--accent); font-size: 1.1rem;">Systemadgang</div>
-        <div class="small mb-4" style="color: var(--text-muted);">Log ind for at tilgå dit ERP-system</div>
+        <div class="fw-bold mb-1" style="color: var(--accent); font-size: 1.1rem;">{{ titel or 'Systemadgang' }}</div>
+        <div class="small mb-4" style="color: var(--text-muted);">{{ undertitel or 'Log ind for at tilgå dit ERP-system' }}</div>
 
         {% if error %}
         <div class="alert py-2 mb-3 text-start" style="background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; font-size:0.85rem; border-radius:8px;">

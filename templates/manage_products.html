@@ -138,6 +138,12 @@
                     <span class="badge ms-1" style="background: var(--border); color: var(--text-muted); font-size:0.65rem;">{{ leverandoerer|length }}</span>
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if aktiv_fane == 'indstillinger' }}"
+                   href="{{ url_for('manage_products', fane='indstillinger') }}">
+                    Indstillinger
+                </a>
+            </li>
         </ul>
 
 
@@ -345,6 +351,62 @@
             Ingen leverandører endnu — tilføj den første ovenfor.
         </div>
         {% endif %}
+
+        {% endif %}
+
+
+        <!-- ══════════════════════════════════════════ -->
+        <!-- FANE 3: INDSTILLINGER                     -->
+        <!-- ══════════════════════════════════════════ -->
+        {% if aktiv_fane == 'indstillinger' %}
+
+        <div class="card p-4 mb-4">
+            <div class="fw-bold mb-1" style="color: var(--accent); font-size:0.9rem;">Valutakurser</div>
+            <div class="small mb-4" style="color: var(--text-muted);">
+                Bruges til at omregne NOK og EUR til DKK i omsætningsgrafen.
+                Opdater kurserne løbende efter aktuel markedskurs.
+            </div>
+            <form method="POST" action="/admin/indstillinger">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label class="form-label-xs">NOK → DKK kurs</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">1 NOK =</span>
+                            <input type="number" step="0.001" name="nok_kurs"
+                                   class="form-control"
+                                   value="{{ kurser.NOK }}" required>
+                            <span class="input-group-text">DKK</span>
+                        </div>
+                        <div class="small mt-1" style="color: var(--text-muted);">f.eks. 0.630</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label-xs">EUR → DKK kurs</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">1 EUR =</span>
+                            <input type="number" step="0.001" name="eur_kurs"
+                                   class="form-control"
+                                   value="{{ kurser.EUR }}" required>
+                            <span class="input-group-text">DKK</span>
+                        </div>
+                        <div class="small mt-1" style="color: var(--text-muted);">f.eks. 7.460</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label-xs">SEK → DKK kurs</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">1 SEK =</span>
+                            <input type="number" step="0.001" name="sek_kurs"
+                                   class="form-control"
+                                   value="{{ kurser.get('SEK', 0.67) }}" required>
+                            <span class="input-group-text">DKK</span>
+                        </div>
+                        <div class="small mt-1" style="color: var(--text-muted);">f.eks. 0.670 (brugt til Malte)</div>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-sm btn-primary fw-bold px-4">
+                    Gem valutakurser
+                </button>
+            </form>
+        </div>
 
         {% endif %}
 

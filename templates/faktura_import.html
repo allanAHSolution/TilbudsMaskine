@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Importer fakturaer | AhSolution ERP</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/font-awesome.min.css">
+    <style>
+        :root {
+            --accent:     #1e325a;
+            --bg-light:   #f4f7f9;
+            --text-dark:  #1e293b;
+            --text-muted: #64748b;
+            --border:     #e2e8f0;
+        }
+        body {
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            padding-bottom: 60px;
+        }
+        .navbar { background: #ffffff; border-bottom: 1px solid var(--border); padding: 16px 0; }
+        .navbar-brand img { height: 48px; }
+        .mantra-text { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 2px; color: var(--accent); font-weight: 700; }
+        .btn-primary { background-color: var(--accent); border-color: var(--accent); }
+        .btn-primary:hover { background-color: #162545; border-color: #162545; }
+        .btn-outline-primary { color: var(--accent); border-color: var(--accent); }
+        .btn-outline-primary:hover { background-color: var(--accent); color: white; }
+        .card { background: #ffffff; border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.04); }
+        .form-label-xs {
+            font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px;
+            color: var(--text-muted); font-weight: 700; margin-bottom: 3px; display: block;
+        }
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: var(--accent);
+            background: #f0f4ff;
+        }
+        .match-badge {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        .match-auto { background: #d1fae5; color: #065f46; }
+        .match-none { background: #fee2e2; color: #991b1b; }
+        .import-table th { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); font-weight: 700; }
+        .import-table td { vertical-align: middle; font-size: 0.82rem; }
+        .skip-row { opacity: 0.4; }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar sticky-top mb-4">
+        <div class="container d-flex justify-content-between align-items-center">
+            <a href="/" class="navbar-brand">
+                <img src="/static/logo.png" alt="AhSolution Logo">
+            </a>
+            <div class="mantra-text d-none d-md-block">Idea. Solution. Execution.</div>
+            <a href="/admin" class="btn btn-sm btn-outline-secondary" style="font-size:0.8rem;">← Dashboard</a>
+        </div>
+    </nav>
+
+    <div class="container" style="max-width: 960px;">
+
+        <div class="mb-4">
+            <div class="fw-bold" style="font-size:1.4rem; color: var(--accent);">Importer fakturaer fra Dinero</div>
+            <div class="small" style="color: var(--text-muted);">
+                Eksporter fakturaer fra Dinero (Rapporter → Salg → Eksporter CSV) og upload filen herunder.
+            </div>
+        </div>
+
+        {% if fejl %}
+        <div class="alert alert-danger">{{ fejl }}</div>
+        {% endif %}
+
+        <!-- ── TRIN 1: Upload ── -->
+        {% if not raekker %}
+        <div class="card p-4">
+            <form method="POST" action="/faktura/importer" enctype="multipart/form-data" id="upload-form">
+                <div class="upload-zone" id="upload-zone" onclick="document.getElementById('csv_input').click()">
+                    <i class="fa fa-upload fa-2x mb-3 d-block" style="color: var(--accent);"></i>
+                    <div class="fw-bold mb-1" style="color: var(--text-dark);">Klik for at vælge CSV-fil</div>
+                    <div class="small" style="color: var(--text-muted);">eller træk og slip filen her</div>
+                    <div id="valgt-fil" class="mt-2 small fw-bold" style="color: var(--accent);"></div>
+                </div>
+                <input type="file" name="csv_file" id="csv_input" accept=".csv" class="d-none">
+
+                <div class="mt-3 p-3 rounded" style="background: #f0f9ff; border: 1px solid #bae6fd;">
+                    <div class="fw-bold small mb-1" style="color: #0369a1;">
+                        <i class="fa fa-info-circle me-1"></i>Sådan eksporterer du fra Dinero:
+                    </div>
+                    <ol class="small mb-0" style="color: #0c4a6e; padding-left: 1.2rem;">
+                        <li>Log ind på Dinero → vælg dit firma</li>
+                        <li>Gå til <strong>Rapporter</strong> i menuen til venstre</li>
+                        <li>Vælg <strong>Salg</strong> eller <strong>Fakturaer</strong></li>
+                        <li>Klik <strong>Eksporter</strong> → download CSV</li>
+                        <li>Upload filen herover</li>
+                    </ol>
+                </div>
+
+                <button type="submit" class="btn btn-primary fw-bold mt-3 px-4" id="upload-btn" disabled>
+                    <i class="fa fa-search me-1"></i>Analysér fil
+                </button>
+            </form>
+        </div>
+
+        {% else %}
+
+        <!-- ── TRIN 2: Preview & import ── -->
+        <div class="card p-4 mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <div>
+                    <div class="fw-bold" style="color: var(--accent);">{{ raekker|length }} fakturaer fundet</div>
+                    <div class="small" style="color: var(--text-muted);">
+                        Vælg hvilket tilbud hver faktura tilhører, og juster beløb/dato hvis nødvendigt.
+                        Rækker uden tilbud springes over.
+                    </div>
+                </div>
+                <a href="/faktura/importer" class="btn btn-sm btn-outline-secondary">
+                    <i class="fa fa-refresh me-1"></i>Upload ny fil
+                </a>
+            </div>
+        </div>
+
+        <form action="/faktura/importer/gem" method="POST">
+            <div class="card p-0 mb-4" style="overflow: hidden;">
+                <table class="table table-hover mb-0 import-table">
+                    <thead style="background: #f8fafc;">
+                        <tr>
+                            <th class="ps-3 py-3">Fra Dinero</th>
+                            <th>Dato</th>
+                            <th>Beløb</th>
+                            <th>Beskrivelse</th>
+                            <th>Tilknyt tilbud</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in raekker %}
+                        {% set har_match = r._match != '' %}
+                        <tr class="{{ '' if har_match else 'skip-row' }}" id="row-{{ loop.index0 }}">
+                            <td class="ps-3" style="max-width: 180px;">
+                                {% if cols.kunde and r.get(cols.kunde) %}
+                                <div class="fw-bold text-truncate">{{ r[cols.kunde] }}</div>
+                                {% endif %}
+                                {% if cols.beskr and r.get(cols.beskr) %}
+                                <div class="small" style="color: var(--text-muted);">{{ r[cols.beskr] }}</div>
+                                {% endif %}
+                                {% if har_match %}
+                                <span class="match-badge match-auto mt-1 d-inline-block">Auto-matchet</span>
+                                {% else %}
+                                <span class="match-badge match-none mt-1 d-inline-block">Ikke matchet</span>
+                                {% endif %}
+                            </td>
+                            <td style="min-width: 130px;">
+                                <input type="date" name="dato" class="form-control form-control-sm"
+                                       value="{% if cols.dato and r.get(cols.dato) %}{{ r[cols.dato] | dinero_dato }}{% endif %}">
+                            </td>
+                            <td style="min-width: 110px;">
+                                <input type="text" name="beloeb" class="form-control form-control-sm"
+                                       value="{{ r[cols.beloeb] if cols.beloeb and r.get(cols.beloeb) else '' }}"
+                                       placeholder="0">
+                            </td>
+                            <td style="min-width: 160px;">
+                                <input type="text" name="beskrivelse" class="form-control form-control-sm"
+                                       value="{{ r[cols.beskr] if cols.beskr and r.get(cols.beskr) else '' }}"
+                                       placeholder="Fakturabeskrivelse">
+                            </td>
+                            <td style="min-width: 200px;">
+                                <select name="tilbud_id" class="form-select form-select-sm tilbud-select"
+                                        data-row="{{ loop.index0 }}"
+                                        onchange="opdaterRaekke(this)">
+                                    <option value="">— Spring over —</option>
+                                    {% for tid, t in vundne.items() %}
+                                    <option value="{{ tid }}" {{ 'selected' if r._match == tid }}>
+                                        #{{ t.nummer }} – {{ t.kunde }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="small" style="color: var(--text-muted);">
+                    <span id="antal-valgt">{{ raekker | selectattr('_match') | list | length }}</span> rækker klar til import
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="/faktura/importer" class="btn btn-outline-secondary">Annuller</a>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">
+                        <i class="fa fa-check me-1"></i>Importer fakturaer
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        {% endif %}
+    </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Upload zone interaktion
+    const zone = document.getElementById('upload-zone');
+    const input = document.getElementById('csv_input');
+    const btn = document.getElementById('upload-btn');
+    const label = document.getElementById('valgt-fil');
+
+    if (input) {
+        input.addEventListener('change', function() {
+            if (this.files.length) {
+                label.textContent = this.files[0].name;
+                btn.disabled = false;
+            }
+        });
+    }
+
+    if (zone) {
+        zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+        zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+        zone.addEventListener('drop', e => {
+            e.preventDefault();
+            zone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                input.files = e.dataTransfer.files;
+                label.textContent = e.dataTransfer.files[0].name;
+                btn.disabled = false;
+            }
+        });
+    }
+
+    // Opdater rækker baseret på tilbud-valg
+    function opdaterRaekke(sel) {
+        const row = document.getElementById('row-' + sel.dataset.row);
+        if (!row) return;
+        if (sel.value === '') {
+            row.classList.add('skip-row');
+        } else {
+            row.classList.remove('skip-row');
+        }
+        // Opdater tæller
+        const aktive = document.querySelectorAll('.tilbud-select');
+        let antal = 0;
+        aktive.forEach(s => { if (s.value !== '') antal++; });
+        const tæller = document.getElementById('antal-valgt');
+        if (tæller) tæller.textContent = antal;
+    }
+</script>
+</body>
+</html>

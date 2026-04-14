@@ -78,10 +78,12 @@
 
                         <!-- Kunde / Site / Att -->
                         <div class="row g-2 mb-3">
-                            <div class="col-4">
-                                <label class="form-label-xs">Kunde</label>
-                                <input type="text" name="kunde" class="form-control form-control-sm"
-                                       value="{{ rediger_data.kunde if rediger_data else '' }}" required>
+                            <div class="col-4 position-relative">
+                                <label class="form-label-xs">Kunde <span style="color:#94a3b8; font-weight:400;">· fra Dinero</span></label>
+                                <input type="text" name="kunde" id="kunde-input" class="form-control form-control-sm"
+                                       value="{{ rediger_data.kunde if rediger_data else '' }}"
+                                       autocomplete="off" oninput="soegKontakter(this)" onfocus="soegKontakter(this)" required>
+                                <div id="kunde-dropdown" class="produkt-valglist" style="display:none;"></div>
                             </div>
                             <div class="col-4">
                                 <label class="form-label-xs">Site</label>
@@ -388,6 +390,41 @@
         const cb = document.getElementById('fragt_separat');
         document.getElementById('fragt-panel').style.display = cb.checked ? '' : 'none';
     }
+
+    // ── Kunde-autocomplete fra Dinero ──
+    let kundeTimer = null;
+    function soegKontakter(input) {
+        clearTimeout(kundeTimer);
+        const q = input.value.trim();
+        kundeTimer = setTimeout(async () => {
+            try {
+                const res  = await fetch('/dinero/kontakter?q=' + encodeURIComponent(q));
+                const data = await res.json();
+                const dd   = document.getElementById('kunde-dropdown');
+                if (!Array.isArray(data) || data.length === 0) {
+                    dd.style.display = 'none';
+                    return;
+                }
+                dd.innerHTML = data.map(k =>
+                    `<div class="produkt-valg-item" onmousedown="valgKontakt('${k.navn.replace(/'/g,"\\'")}')">
+                        <span class="fw-bold">${k.navn}</span>
+                        ${k.email ? `<span class="produkt-valg-pris">${k.email}</span>` : ''}
+                     </div>`
+                ).join('');
+                dd.style.display = 'block';
+            } catch (e) {}
+        }, 200);
+    }
+    function valgKontakt(navn) {
+        document.getElementById('kunde-input').value = navn;
+        document.getElementById('kunde-dropdown').style.display = 'none';
+    }
+    document.addEventListener('click', function(e) {
+        if (e.target.id !== 'kunde-input') {
+            const dd = document.getElementById('kunde-dropdown');
+            if (dd) dd.style.display = 'none';
+        }
+    });
 </script>
 </body>
 </html>

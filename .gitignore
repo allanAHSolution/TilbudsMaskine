@@ -22,3 +22,7 @@ nummer.txt
 
 # Claude Code memory/sessions
 .claude/
+
+# Dinero API credentials (lokal only - skal ligges manuelt på prod)
+dinero_config.json
+dinero_cache.json

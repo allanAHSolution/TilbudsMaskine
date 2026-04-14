@@ -1,13 +1,18 @@
-from flask import Flask, render_template, request, send_file, redirect, url_for, session
+from flask import Flask, render_template, request, send_file, redirect, url_for, session, jsonify
 import json
 import os
 import uuid
-import csv
-import io
-import re
 import calendar
 from datetime import datetime, timedelta
 from fpdf import FPDF
+
+try:
+    import dinero as dinero_api
+    DINERO_OK = True
+except Exception as e:
+    dinero_api = None
+    DINERO_OK  = False
+    print(f"⚠ Dinero-modul kunne ikke loades: {e}")
 
 app = Flask(__name__)
 app.secret_key = "ahsolution_secret_2026"
@@ -371,6 +376,60 @@ def vandberegner_no():
     if not session.get('logged_in') and not session.get('guest'):
         return redirect(url_for('login'))
     return redirect('/vandberegner?land=no')
+
+
+# ────────── DINERO-INTEGRATION ──────────
+@app.route('/dinero/kontakter')
+def dinero_kontakter():
+    """Autocomplete-endpoint: returnerer liste af kontakter fra Dinero."""
+    if not session.get('logged_in'):
+        return jsonify([])
+    if not DINERO_OK:
+        return jsonify({"error": "Dinero ikke konfigureret"}), 503
+    try:
+        sog = request.args.get('q', '')
+        return jsonify(dinero_api.hent_kontakter(sog=sog, limit=20))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/dinero/sync')
+def dinero_sync():
+    """Tjek alle fakturaer der er pushet til Dinero, og opdater status (især betaling)."""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    if not DINERO_OK:
+        return redirect(url_for('admin_panel'))
+
+    all_data = load_data(TILBUD_FILE, {})
+    opdateret = 0
+    fejl      = 0
+    for t in all_data.values():
+        for f in t.get('fakturaer', []):
+            guid = f.get('dinero_guid')
+            if not guid or f.get('dinero_status') == 'Paid':
+                continue
+            try:
+                info = dinero_api.hent_faktura_status(guid)
+                ps   = info.get('PaymentStatus') or info.get('paymentStatus') or ''
+                f['dinero_status']    = ps if ps else (f.get('dinero_status') or 'Draft')
+                f['dinero_timestamp'] = info.get('TimeStamp') or info.get('timeStamp') or f.get('dinero_timestamp')
+                opdateret += 1
+            except Exception as e:
+                f['dinero_fejl'] = str(e)[:200]
+                fejl += 1
+    save_data(TILBUD_FILE, all_data)
+    return f"✓ Opdateret {opdateret} fakturaer ({fejl} fejl). <a href='/admin'>Tilbage</a>"
+
+
+@app.route('/dinero/test')
+def dinero_test():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    if not DINERO_OK:
+        return "Dinero-modulet kunne ikke loades (mangler requests eller dinero_config.json)", 503
+    ok, msg = dinero_api.test_forbindelse()
+    return f"{'✓' if ok else '✗'} {msg}"
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -904,124 +963,6 @@ def _beregn_faktureringsopgaver(idag):
     return opgaver
 
 
-def _parse_beloeb(s):
-    """Parser dansk beløbsformat: '1.234,56' eller '1234.56' → float."""
-    if not s:
-        return 0.0
-    s = re.sub(r'[^\d.,-]', '', s.strip())
-    if ',' in s and '.' in s:
-        if s.rindex(',') > s.rindex('.'):
-            s = s.replace('.', '').replace(',', '.')
-        else:
-            s = s.replace(',', '')
-    elif ',' in s:
-        s = s.replace(',', '.')
-    try:
-        return float(s)
-    except ValueError:
-        return 0.0
-
-
-def _find_col(headers, keywords):
-    """Finder første kolonnenavn der matcher et af nøgleordene."""
-    for h in (headers or []):
-        if any(kw in h.lower() for kw in keywords):
-            return h
-    return None
-
-
-@app.route('/faktura/importer', methods=['GET', 'POST'])
-def faktura_importer():
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-
-    all_data = load_data(TILBUD_FILE, {})
-    vundne = {k: v for k, v in all_data.items()
-              if v.get('vundet') is True and not v.get('slettet')}
-
-    raekker = None
-    headers = None
-    cols = {}
-    fejl = None
-
-    if request.method == 'POST':
-        csv_fil = request.files.get('csv_file')
-        if csv_fil and csv_fil.filename:
-            try:
-                content = csv_fil.read().decode('utf-8-sig')
-                sep = ';' if content.split('\n')[0].count(';') >= content.split('\n')[0].count(',') else ','
-                reader = csv.DictReader(io.StringIO(content), delimiter=sep)
-                raekker = list(reader)
-                headers = list(reader.fieldnames or [])
-
-                cols = {
-                    'dato':    _find_col(headers, ['dato', 'date', 'udsted']),
-                    'beloeb':  _find_col(headers, ['ekskl', 'beløb', 'belob', 'total', 'amount', 'sum']),
-                    'kunde':   _find_col(headers, ['kunde', 'customer', 'navn', 'name']),
-                    'beskr':   _find_col(headers, ['beskrivelse', 'description', 'tekst', 'fakturanr', 'nummer']),
-                }
-
-                # Auto-match tilbud på kundenavn
-                for r in raekker:
-                    r['_match'] = ''
-                    if cols['kunde'] and r.get(cols['kunde']):
-                        søg = r[cols['kunde']].lower().strip()
-                        for tid, t in vundne.items():
-                            tnavn = t.get('kunde', '').lower().strip()
-                            if tnavn and (tnavn in søg or søg in tnavn):
-                                r['_match'] = tid
-                                break
-            except Exception as e:
-                fejl = f"Kunne ikke læse filen: {e}"
-        else:
-            fejl = "Ingen fil valgt."
-
-    return render_template('faktura_import.html',
-                           vundne=vundne,
-                           raekker=raekker,
-                           headers=headers,
-                           cols=cols,
-                           fejl=fejl)
-
-
-@app.route('/faktura/importer/gem', methods=['POST'])
-def faktura_importer_gem():
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-
-    all_data = load_data(TILBUD_FILE, {})
-
-    tilbud_ids  = request.form.getlist('tilbud_id')
-    datoer      = request.form.getlist('dato')
-    beloeb_list = request.form.getlist('beloeb')
-    beskr_list  = request.form.getlist('beskrivelse')
-
-    importeret = 0
-    for i, tilbud_id in enumerate(tilbud_ids):
-        if not tilbud_id or tilbud_id not in all_data:
-            continue
-
-        t = all_data[tilbud_id]
-        if 'fakturaer' not in t:
-            t['fakturaer'] = []
-
-        dato_raw = datoer[i] if i < len(datoer) else ''
-        try:
-            dato = datetime.strptime(dato_raw, '%Y-%m-%d').strftime('%d-%m-%Y')
-        except ValueError:
-            dato = dato_raw
-
-        t['fakturaer'].append({
-            "dato":        dato,
-            "beskrivelse": beskr_list[i] if i < len(beskr_list) else '',
-            "beloeb":      _parse_beloeb(beloeb_list[i] if i < len(beloeb_list) else '0')
-        })
-        importeret += 1
-
-    save_data(TILBUD_FILE, all_data)
-    return redirect(url_for('admin_panel'))
-
-
 @app.route('/faktura/tilfoej/<tilbud_id>', methods=['POST'])
 def faktura_tilfoej(tilbud_id):
     if not session.get('logged_in'):
@@ -1037,15 +978,44 @@ def faktura_tilfoej(tilbud_id):
 
     dato_raw = request.form.get('dato', '')
     try:
-        dato = datetime.strptime(dato_raw, '%Y-%m-%d').strftime('%d-%m-%Y')
+        dato     = datetime.strptime(dato_raw, '%Y-%m-%d').strftime('%d-%m-%Y')
+        dato_iso = datetime.strptime(dato_raw, '%Y-%m-%d').strftime('%Y-%m-%d')
     except ValueError:
-        dato = datetime.now().strftime('%d-%m-%Y')
+        dato     = datetime.now().strftime('%d-%m-%Y')
+        dato_iso = datetime.now().strftime('%Y-%m-%d')
 
-    t['fakturaer'].append({
-        "dato": dato,
-        "beskrivelse": request.form.get('beskrivelse', ''),
-        "beloeb": float(request.form.get('beloeb', 0) or 0)
-    })
+    beloeb      = float(request.form.get('beloeb', 0) or 0)
+    beskrivelse = request.form.get('beskrivelse', '')
+    push_dinero = request.form.get('push_dinero') == 'on'
+
+    faktura = {
+        "dato":        dato,
+        "beskrivelse": beskrivelse,
+        "beloeb":      beloeb,
+    }
+
+    # Auto-push til Dinero som kladde
+    if push_dinero and DINERO_OK and beloeb > 0:
+        try:
+            linjer = [{
+                "beskrivelse": beskrivelse or f"Faktura til {t.get('kunde', '')}",
+                "antal":       1,
+                "enhedspris":  beloeb,
+            }]
+            guid, ts = dinero_api.opret_faktura(
+                kunde_navn=t.get('kunde', ''),
+                linjer=linjer,
+                dato=dato_iso,
+                valuta=t.get('valuta', 'DKK'),
+                kommentar=f"Tilbud #{t.get('nummer')} — {beskrivelse}",
+            )
+            faktura["dinero_guid"]      = guid
+            faktura["dinero_timestamp"] = ts
+            faktura["dinero_status"]    = "Draft"
+        except Exception as e:
+            faktura["dinero_fejl"] = str(e)[:200]
+
+    t['fakturaer'].append(faktura)
 
     save_data(TILBUD_FILE, all_data)
     return redirect(url_for('admin_panel'))

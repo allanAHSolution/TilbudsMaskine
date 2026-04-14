@@ -148,6 +148,9 @@
                 <a href="/admin/produkter" class="btn btn-sm btn-warning fw-bold shadow-sm" style="font-size:0.8rem;">
                     <i class="fa fa-edit me-1"></i> Stamdata
                 </a>
+                <a href="/dinero/sync" class="btn btn-sm fw-bold shadow-sm" style="background:#111827; color:white; font-size:0.8rem;" title="Opdater betalingsstatus fra Dinero">
+                    <i class="fa fa-sync me-1"></i> Dinero sync
+                </a>
                 <a href="/logout" class="btn btn-sm btn-outline-secondary" style="font-size:0.8rem;">Log ud</a>
             </div>
         </div>
@@ -384,6 +387,12 @@
                                         <div class="col-5"><input type="text" name="beskrivelse" class="form-control form-control-sm" placeholder="Beskrivelse (f.eks. Rate 1)"></div>
                                         <div class="col-3"><input type="number" name="beloeb" step="0.01" min="0" class="form-control form-control-sm" placeholder="{{ t.valuta }}"></div>
                                     </div>
+                                    <div class="form-check form-check-inline mt-1" style="font-size:0.72rem;">
+                                        <input type="checkbox" class="form-check-input" id="push-din-{{ id }}" name="push_dinero" checked>
+                                        <label class="form-check-label" for="push-din-{{ id }}" style="color:#64748b;">
+                                            <i class="fa fa-cloud-upload-alt me-1"></i> Push som kladde til Dinero
+                                        </label>
+                                    </div>
                                     <button type="submit" class="btn btn-xs btn-success mt-1 w-100 fw-bold">Gem faktura</button>
                                 </form>
                             </div>
@@ -392,7 +401,16 @@
                                 <div class="mt-2">
                                     {% for f in fakturaer %}
                                     <div class="d-flex justify-content-between align-items-center py-1" style="border-bottom:1px solid #f0fdf4; font-size:0.72rem;">
-                                        <span>{{ f.dato }} — {{ f.beskrivelse }}</span>
+                                        <span>
+                                            {{ f.dato }} — {{ f.beskrivelse }}
+                                            {% if f.dinero_status == 'Paid' %}
+                                                <span class="badge ms-1" style="background:#16a34a; font-size:0.6rem;">DINERO · BETALT</span>
+                                            {% elif f.dinero_guid %}
+                                                <span class="badge ms-1" style="background:#0ea5e9; font-size:0.6rem;">DINERO · {{ f.dinero_status or 'KLADDE' }}</span>
+                                            {% elif f.dinero_fejl %}
+                                                <span class="badge ms-1" style="background:#dc2626; font-size:0.6rem;" title="{{ f.dinero_fejl }}">DINERO-FEJL</span>
+                                            {% endif %}
+                                        </span>
                                         <div class="d-flex gap-2 align-items-center">
                                             <span class="fw-bold">{{ "{:,.0f}".format(f.beloeb) }} {{ t.valuta }}</span>
                                             <a href="/faktura/slet/{{ id }}/{{ loop.index0 }}" onclick="return confirm('Slet faktura?')"

@@ -693,6 +693,12 @@ def set_status(tilbud_id, status):
     if tilbud_id in all_data:
         if status == 'vundet':
             all_data[tilbud_id]['vundet'] = True
+            if 'projekt' not in all_data[tilbud_id]:
+                all_data[tilbud_id]['projekt'] = {
+                    "oprettet": datetime.now().strftime('%d-%m-%Y'),
+                    "omkostninger": [],
+                    "noter": "",
+                }
         elif status == 'tabt':
             all_data[tilbud_id]['vundet'] = False
         elif status == 'aktiv':
@@ -723,6 +729,85 @@ def genaktiver_tilbud(tilbud_id):
         all_data[tilbud_id]['arkiveret'] = False
         save_data(TILBUD_FILE, all_data)
     return redirect(url_for('admin_panel'))
+
+
+# ────────── PROJEKT-MODUL ──────────
+def _projekt_budget(tilbud):
+    """Beregn samlet tilbudssum som budget."""
+    return sum(
+        float(p.get('antal', 1)) * float(p.get('pris', 0))
+        for p in tilbud.get('produkter', [])
+    )
+
+
+@app.route('/projekt/<tilbud_id>')
+def projekt_side(tilbud_id):
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+    all_data = load_data(TILBUD_FILE, {})
+    t = all_data.get(tilbud_id)
+    if not t or t.get('vundet') is not True:
+        return redirect(url_for('admin_panel'))
+
+    if 'projekt' not in t:
+        t['projekt'] = {"oprettet": datetime.now().strftime('%d-%m-%Y'), "omkostninger": [], "noter": ""}
+        save_data(TILBUD_FILE, all_data)
+
+    budget       = _projekt_budget(t)
+    faktureret   = sum(float(f.get('beloeb', 0)) for f in t.get('fakturaer', []))
+    omkostninger = t['projekt'].get('omkostninger', [])
+    total_omk    = sum(float(o.get('beloeb', 0)) for o in omkostninger)
+    margin       = faktureret - total_omk
+
+    return render_template('projekt.html',
+                           t=t, id=tilbud_id,
+                           budget=budget,
+                           faktureret=faktureret,
+                           total_omk=total_omk,
+                           margin=margin,
+                           now_date=datetime.now().strftime('%Y-%m-%d'))
+
+
+@app.route('/projekt/<tilbud_id>/omkostning', methods=['POST'])
+def projekt_tilfoej_omkostning(tilbud_id):
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+    all_data = load_data(TILBUD_FILE, {})
+    t = all_data.get(tilbud_id)
+    if not t or 'projekt' not in t:
+        return redirect(url_for('admin_panel'))
+
+    dato_raw = request.form.get('dato', '')
+    try:
+        dato = datetime.strptime(dato_raw, '%Y-%m-%d').strftime('%d-%m-%Y')
+    except ValueError:
+        dato = datetime.now().strftime('%d-%m-%Y')
+
+    t['projekt']['omkostninger'].append({
+        "dato":        dato,
+        "beskrivelse": request.form.get('beskrivelse', ''),
+        "beloeb":      float(request.form.get('beloeb', 0) or 0),
+        "leverandoer": request.form.get('leverandoer', ''),
+    })
+    save_data(TILBUD_FILE, all_data)
+    return redirect(url_for('projekt_side', tilbud_id=tilbud_id))
+
+
+@app.route('/projekt/<tilbud_id>/omkostning/slet/<int:index>')
+def projekt_slet_omkostning(tilbud_id, index):
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+    all_data = load_data(TILBUD_FILE, {})
+    t = all_data.get(tilbud_id)
+    if t and 'projekt' in t:
+        omk = t['projekt'].get('omkostninger', [])
+        if 0 <= index < len(omk):
+            omk.pop(index)
+        save_data(TILBUD_FILE, all_data)
+    return redirect(url_for('projekt_side', tilbud_id=tilbud_id))
 
 
 @app.route('/nyt-tilbud')

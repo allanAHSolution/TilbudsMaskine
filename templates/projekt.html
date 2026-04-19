@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projekt #{{ t.nummer }} | AhSolution ERP</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/font-awesome.min.css">
+    <style>
+        :root {
+            --accent:    #1e325a;
+            --accent-lt: #e8ecf3;
+            --green:     #059669;
+            --green-lt:  #ecfdf5;
+            --red:       #dc2626;
+            --red-lt:    #fef2f2;
+            --text-dark: #1e293b;
+            --text-muted:#64748b;
+            --border:    #e2e8f0;
+        }
+        body { background-color: #f4f7f9; color: var(--text-dark); font-family: 'Inter', system-ui, -apple-system, sans-serif; padding-bottom: 60px; }
+        .navbar { background: #fff; border-bottom: 1px solid var(--border); padding: 16px 0; }
+        .navbar-brand img { height: 48px; }
+        .card { background: #fff; border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.04); margin-bottom: 20px; }
+        .section-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); font-weight: 700; }
+        .form-label-xs { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); font-weight: 700; margin-bottom: 3px; display: block; }
+        .btn-xs { padding: 0.15rem 0.5rem; font-size: 0.72rem; line-height: 1.4; border-radius: 5px; }
+
+        .projekt-header {
+            background: linear-gradient(135deg, #1e325a 0%, #334980 100%);
+            color: white;
+            border-radius: 14px;
+            padding: 24px 28px;
+            margin-bottom: 24px;
+        }
+
+        .kpi-kort {
+            border-radius: 10px;
+            padding: 16px 18px;
+            text-align: center;
+        }
+        .kpi-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; opacity: 0.7; margin-bottom: 4px; }
+        .kpi-value { font-size: 1.5rem; font-weight: 800; line-height: 1.1; }
+        .kpi-sub   { font-size: 0.72rem; opacity: 0.6; margin-top: 2px; }
+
+        .omk-item {
+            border: 1px solid var(--border);
+            border-left: 4px solid #f59e0b;
+            border-radius: 8px;
+            background: white;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            transition: box-shadow 0.15s;
+        }
+        .omk-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+
+        .fakt-item {
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--green);
+            border-radius: 8px;
+            background: var(--green-lt);
+            padding: 10px 14px;
+            margin-bottom: 8px;
+        }
+
+        .margin-bar {
+            height: 8px;
+            border-radius: 4px;
+            background: #e2e8f0;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .margin-bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar sticky-top mb-4">
+        <div class="container d-flex justify-content-between align-items-center">
+            <a href="/" class="navbar-brand"><img src="/static/logo.png" alt="AhSolution Logo"></a>
+            <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:2px; color:var(--accent); font-weight:700;" class="d-none d-md-block">Projektøkonomi</div>
+            <div class="d-flex gap-2 align-items-center">
+                <a href="/admin" class="btn btn-sm btn-outline-secondary" style="font-size:0.8rem;">
+                    <i class="fa fa-arrow-left me-1"></i> Dashboard
+                </a>
+                <a href="/logout" class="btn btn-sm btn-outline-secondary" style="font-size:0.8rem;">Log ud</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <!-- ── Header ── -->
+        <div class="projekt-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <div style="font-size:0.7rem; opacity:0.8; text-transform:uppercase; letter-spacing:2px;">Projekt #{{ t.nummer }}</div>
+                    <div style="font-size:1.6rem; font-weight:800; line-height:1.2;">{{ t.kunde }}</div>
+                    <div style="font-size:0.85rem; opacity:0.85; margin-top:6px;">
+                        {% if t.site %}Site: {{ t.site }} · {% endif %}
+                        {{ t.valuta }} · {{ t.incoterm }}
+                        · Tilbud {{ t.dato }}
+                        {% if t.projekt and t.projekt.oprettet %} · Projekt oprettet {{ t.projekt.oprettet }}{% endif %}
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <a href="/nyt-tilbud?rediger={{ id }}" class="btn btn-sm fw-bold" style="background:rgba(255,255,255,0.2); color:white; border:1px solid rgba(255,255,255,0.4);">
+                        <i class="fa fa-pencil me-1"></i> Ret tilbud
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── KPI-kort ── -->
+        {% set margin_pct = ((margin / faktureret * 100)|round(0)|int) if faktureret > 0 else 0 %}
+        {% set budget_pct = ((faktureret / budget * 100)|round(0)|int) if budget > 0 else 0 %}
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="kpi-kort" style="background: var(--accent-lt); color: var(--accent);">
+                    <div class="kpi-label">Budget (tilbud)</div>
+                    <div class="kpi-value">{{ "{:,.0f}".format(budget) }}</div>
+                    <div class="kpi-sub">{{ t.valuta }}</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-kort" style="background: var(--green-lt); color: var(--green);">
+                    <div class="kpi-label">Faktureret</div>
+                    <div class="kpi-value">{{ "{:,.0f}".format(faktureret) }}</div>
+                    <div class="kpi-sub">{{ budget_pct }}% af budget</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-kort" style="background: #fffbeb; color: #b45309;">
+                    <div class="kpi-label">Omkostninger</div>
+                    <div class="kpi-value">{{ "{:,.0f}".format(total_omk) }}</div>
+                    <div class="kpi-sub">{{ t.projekt.omkostninger|length }} poster</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-kort" style="background: {{ '#ecfdf5' if margin >= 0 else '#fef2f2' }}; color: {{ '#059669' if margin >= 0 else '#dc2626' }};">
+                    <div class="kpi-label">Margin</div>
+                    <div class="kpi-value">{{ "{:,.0f}".format(margin) }}</div>
+                    <div class="kpi-sub">{{ margin_pct }}%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Margin-bar -->
+        {% if faktureret > 0 %}
+        <div class="card p-3 mb-4">
+            <div class="d-flex justify-content-between" style="font-size:0.72rem; color:var(--text-muted);">
+                <span>Omkostninger vs. Faktureret</span>
+                <span>{{ "{:,.0f}".format(total_omk) }} / {{ "{:,.0f}".format(faktureret) }} {{ t.valuta }}</span>
+            </div>
+            {% set omk_pct = (total_omk / faktureret * 100) if faktureret > 0 else 0 %}
+            <div class="margin-bar">
+                <div class="margin-bar-fill" style="width:{{ [omk_pct, 100]|min }}%; background: {{ '#f59e0b' if omk_pct < 70 else ('#f97316' if omk_pct < 90 else '#dc2626') }};"></div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="row g-4">
+
+            <!-- ── Venstre: Fakturaer (omsætning) ── -->
+            <div class="col-lg-6">
+                <div class="card p-4">
+                    <div class="fw-bold mb-1" style="color: var(--green); font-size:0.95rem;">
+                        <i class="fa fa-line-chart me-1"></i> Omsætning / Fakturaer
+                    </div>
+                    <div class="small mb-3" style="color: var(--text-muted);">
+                        {{ t.fakturaer|default([])|length }} faktura(er) · {{ "{:,.0f}".format(faktureret) }} {{ t.valuta }}
+                    </div>
+
+                    {% for f in t.fakturaer|default([]) %}
+                    <div class="fakt-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="small fw-bold">{{ f.beskrivelse or 'Faktura' }}</div>
+                                <div style="font-size:0.72rem; color: var(--text-muted);">
+                                    {{ f.dato }}
+                                    {% if f.dinero_status %}
+                                        · <span style="color:#0ea5e9;">Dinero: {{ f.dinero_status }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <span class="fw-bold" style="color: var(--green);">{{ "{:,.0f}".format(f.beloeb) }} {{ t.valuta }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    {% if not t.fakturaer %}
+                    <div class="text-center py-4" style="color: var(--text-muted);">
+                        <div class="small">Ingen fakturaer registreret endnu</div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Produktlinjer fra tilbud -->
+                    <div class="section-label mt-3 mb-2">Produktlinjer (tilbud)</div>
+                    {% for p in t.produkter|default([]) %}
+                    <div class="d-flex justify-content-between py-1" style="border-bottom:1px solid #f1f5f9; font-size:0.78rem;">
+                        <span>{{ p.navn }} × {{ p.antal }}</span>
+                        <span class="fw-bold">{{ "{:,.0f}".format(p.antal|float * p.pris|float) }} {{ t.valuta }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- ── Højre: Omkostninger ── -->
+            <div class="col-lg-6">
+                <div class="card p-4">
+                    <div class="fw-bold mb-1" style="color: #b45309; font-size:0.95rem;">
+                        <i class="fa fa-shopping-cart me-1"></i> Omkostninger
+                    </div>
+                    <div class="small mb-3" style="color: var(--text-muted);">
+                        Registrér udgifter til dette projekt. Brug <strong>#{{ t.nummer }}</strong> i Dinero-bilaget.
+                    </div>
+
+                    <!-- Tilføj omkostning -->
+                    <div class="p-3 rounded mb-3" style="background:#fffbeb; border:1px solid #fde68a;">
+                        <div class="section-label mb-2">Registrér omkostning</div>
+                        <form action="/projekt/{{ id }}/omkostning" method="POST">
+                            <div class="row g-2 mb-2">
+                                <div class="col-12">
+                                    <label class="form-label-xs">Beskrivelse</label>
+                                    <input type="text" name="beskrivelse" class="form-control form-control-sm"
+                                           placeholder="F.eks. Pumpe fra Grundfos" required>
+                                </div>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-4">
+                                    <label class="form-label-xs">Beløb ({{ t.valuta }})</label>
+                                    <input type="number" name="beloeb" class="form-control form-control-sm"
+                                           placeholder="0" step="0.01" min="0" required>
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label-xs">Dato</label>
+                                    <input type="date" name="dato" class="form-control form-control-sm" value="{{ now_date }}">
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label-xs">Leverandør</label>
+                                    <input type="text" name="leverandoer" class="form-control form-control-sm" placeholder="Valgfri">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-sm w-100 mt-2 fw-bold" style="background:#f59e0b; color:white; border:none;">
+                                <i class="fa fa-plus me-1"></i> Tilføj omkostning
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Omkostningsliste -->
+                    {% if t.projekt.omkostninger %}
+                    <div class="section-label mb-2">Registrerede omkostninger</div>
+                    {% for o in t.projekt.omkostninger|reverse %}
+                    <div class="omk-item">
+                        <div class="d-flex justify-content-between align-items-center gap-2">
+                            <div style="min-width:0;">
+                                <div class="small fw-bold text-truncate">{{ o.beskrivelse }}</div>
+                                <div style="font-size:0.72rem; color: var(--text-muted);">
+                                    {{ o.dato }}
+                                    {% if o.leverandoer %} · {{ o.leverandoer }}{% endif %}
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                <span class="fw-bold" style="font-size:0.85rem; white-space:nowrap; color:#b45309;">
+                                    {{ "{:,.0f}".format(o.beloeb|float) }} {{ t.valuta }}
+                                </span>
+                                <a href="/projekt/{{ id }}/omkostning/slet/{{ loop.revindex0 }}"
+                                   onclick="return confirm('Slet omkostning?')"
+                                   class="btn btn-xs btn-outline-danger">✕</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center py-4" style="color: var(--text-muted);">
+                        <i class="fa fa-inbox fa-2x mb-2 d-block" style="color:#cbd5e1;"></i>
+                        <div class="small">Ingen omkostninger registreret endnu</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

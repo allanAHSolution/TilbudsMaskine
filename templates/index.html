@@ -355,6 +355,7 @@
                                 <div class="tilbud-total">{{ "{:,.0f}".format(total.val) }} {{ t.valuta }} · {{ t.dato }}</div>
                             </div>
                             <div class="d-flex flex-wrap gap-1 justify-content-end flex-shrink-0">
+                                <a href="/projekt/{{ id }}" class="btn btn-xs fw-bold" style="background:var(--accent); color:white;">Projekt</a>
                                 <a href="/nyt-tilbud?rediger={{ id }}" class="btn btn-xs btn-outline-primary">Ret</a>
                                 <a href="/download/{{ id }}/tilbud" class="btn btn-xs btn-outline-secondary">PDF</a>
                                 <a href="/download/{{ id }}/ordrebekraeftelse" class="btn btn-xs btn-outline-dark">Ordrebek.</a>

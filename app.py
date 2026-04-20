@@ -672,22 +672,25 @@ def admin_panel():
     )
     faktureringsopgaver = _beregn_faktureringsopgaver(idag)
 
-    # Gruppér vundne projekter efter kunde (for kollapsibel UI)
+    # Gruppér vundne projekter efter kunde (normaliser: strip + case-insensitive)
     vundne_per_kunde = {}
     for tid, t in vundne.items():
-        kunde = t.get('kunde', '—') or '—'
-        vundne_per_kunde.setdefault(kunde, []).append((tid, t))
+        raw   = (t.get('kunde') or '—').strip() or '—'
+        nkey  = raw.lower()  # nøgle til gruppering
+        if nkey not in vundne_per_kunde:
+            vundne_per_kunde[nkey] = {'display': raw, 'items': []}
+        vundne_per_kunde[nkey]['items'].append((tid, t))
     # Sortér kunder alfabetisk, projekter indenfor hver kunde efter nummer desc
     vundne_grupper = []
-    for kunde in sorted(vundne_per_kunde.keys(), key=str.lower):
-        projekter = sorted(vundne_per_kunde[kunde], key=lambda x: -(x[1].get('nummer') or 0))
+    for nkey in sorted(vundne_per_kunde.keys()):
+        projekter = sorted(vundne_per_kunde[nkey]['items'], key=lambda x: -(x[1].get('nummer') or 0))
         grp_total = 0
         grp_fakt  = 0
         for _, t in projekter:
             grp_total += sum(float(p.get('antal',1))*float(p.get('pris',0)) for p in t.get('produkter',[]))
             grp_fakt  += sum(float(f.get('beloeb',0)) for f in t.get('fakturaer',[]))
         vundne_grupper.append({
-            'kunde':     kunde,
+            'kunde':     vundne_per_kunde[nkey]['display'],
             'projekter': projekter,
             'total':     grp_total,
             'faktureret': grp_fakt,

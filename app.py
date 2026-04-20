@@ -396,18 +396,42 @@ def dinero_kontakter():
 
 @app.route('/dinero/sync')
 def dinero_sync():
-    """Tjek alle fakturaer der er pushet til Dinero, og opdater status (især betaling)."""
+    """Opdater betalingsstatus på pushede fakturaer + retry fejlede pushes."""
     if not session.get('logged_in'):
         return redirect(url_for('login'))
     if not DINERO_OK:
         return redirect(url_for('admin_panel'))
 
     all_data = load_data(TILBUD_FILE, {})
-    opdateret = 0
-    fejl      = 0
     for t in all_data.values():
         for f in t.get('fakturaer', []):
             guid = f.get('dinero_guid')
+
+            # 1) Retry: fakturaer der fejlede tidligere
+            if not guid and f.get('dinero_fejl'):
+                try:
+                    beskrivelse = f.get('beskrivelse') or f"Faktura til {t.get('kunde','')}"
+                    try:
+                        dato_iso = datetime.strptime(f.get('dato',''), '%d-%m-%Y').strftime('%Y-%m-%d')
+                    except ValueError:
+                        dato_iso = datetime.now().strftime('%Y-%m-%d')
+                    linjer = [{"beskrivelse": beskrivelse, "antal": 1, "enhedspris": float(f.get('beloeb', 0))}]
+                    new_guid, ts = dinero_api.opret_faktura(
+                        kunde_navn=t.get('kunde', ''),
+                        linjer=linjer,
+                        dato=dato_iso,
+                        valuta=t.get('valuta', 'DKK'),
+                        kommentar=f"Tilbud #{t.get('nummer')} — {beskrivelse}",
+                    )
+                    f['dinero_guid']      = new_guid
+                    f['dinero_timestamp'] = ts
+                    f['dinero_status']    = 'Draft'
+                    f.pop('dinero_fejl', None)
+                except Exception as e:
+                    f['dinero_fejl'] = str(e)[:200]
+                continue
+
+            # 2) Opdater status på eksisterende
             if not guid or f.get('dinero_status') == 'Paid':
                 continue
             try:
@@ -415,10 +439,9 @@ def dinero_sync():
                 ps   = info.get('PaymentStatus') or info.get('paymentStatus') or ''
                 f['dinero_status']    = ps if ps else (f.get('dinero_status') or 'Draft')
                 f['dinero_timestamp'] = info.get('TimeStamp') or info.get('timeStamp') or f.get('dinero_timestamp')
-                opdateret += 1
             except Exception as e:
                 f['dinero_fejl'] = str(e)[:200]
-                fejl += 1
+
     save_data(TILBUD_FILE, all_data)
     return redirect(url_for('dinero_omkostninger'))
 

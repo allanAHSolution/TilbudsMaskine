@@ -334,14 +334,43 @@
                     {% endif %}
                 </div>
 
-                <!-- ── Vundne tilbud ── -->
-                {% if vundne %}
+                <!-- ── Aktive projekter (grupperet pr. kunde) ── -->
+                {% if vundne_grupper %}
                 <div class="card p-4">
                     <div class="mb-3">
-                        <div class="fw-bold" style="color: #16a34a;">Vundne tilbud</div>
-                        <div class="small" style="color: var(--text-muted);">{{ vundne|length }} aktive projekter</div>
+                        <div class="fw-bold" style="color: #16a34a;">Aktive projekter</div>
+                        <div class="small" style="color: var(--text-muted);">
+                            {{ vundne|length }} projekter fordelt på {{ vundne_grupper|length }} kunder
+                        </div>
                     </div>
-                    {% for id, t in vundne.items()|reverse %}
+
+                    {% for grp in vundne_grupper %}
+                    {% set gid = 'kunde-' ~ loop.index %}
+                    {% set pct = (grp.faktureret / grp.total * 100)|round|int if grp.total > 0 else 0 %}
+                    <div class="mb-2" style="border:1px solid var(--border); border-radius:8px; overflow:hidden;">
+                        <div class="d-flex justify-content-between align-items-center p-2"
+                             role="button" data-bs-toggle="collapse" data-bs-target="#{{ gid }}"
+                             style="cursor:pointer; background:#f0fdf4;">
+                            <div style="min-width:0;">
+                                <div class="fw-bold small text-truncate" style="color:#166534;">
+                                    <i class="fa fa-chevron-down me-1" style="transition:transform 0.2s; font-size:0.65rem;"></i>
+                                    {{ grp.kunde }}
+                                </div>
+                                <div class="small" style="color: var(--text-muted); font-size:0.7rem;">
+                                    {{ grp.antal }} projekt{{ 'er' if grp.antal != 1 }} ·
+                                    {{ "{:,.0f}".format(grp.faktureret) }} / {{ "{:,.0f}".format(grp.total) }} {{ grp.valuta }} faktureret
+                                </div>
+                            </div>
+                            <div class="text-end flex-shrink-0">
+                                <div class="fw-bold" style="color:#16a34a; font-size:0.9rem;">{{ pct }}%</div>
+                            </div>
+                        </div>
+                        <div class="progress" style="height: 3px; border-radius: 0;">
+                            <div class="progress-bar faktura-bar" data-w="{{ pct }}" style="background: #16a34a;"></div>
+                        </div>
+
+                        <div id="{{ gid }}" class="collapse" style="padding: 8px;">
+                        {% for id, t in grp.projekter %}
                     {% set total = namespace(val=0) %}
                     {% for p in t.produkter %}{% set total.val = total.val + (p.antal|float * p.pris|float) %}{% endfor %}
                     {% set fakturaer = t.get('fakturaer', []) %}
@@ -425,6 +454,9 @@
                         </div>
                     </div>
                     {% endfor %}
+                        </div>  {# collapse #}
+                    </div>  {# kunde-gruppe #}
+                    {% endfor %}
                 </div>
                 {% endif %}
 
@@ -505,6 +537,18 @@
     /* ── Faktura-bar bredde ── */
     document.querySelectorAll('.faktura-bar').forEach(function(bar) {
         bar.style.width = (bar.dataset.w || 0) + '%';
+    });
+
+    /* ── Chevron-rotation på kunde-grupper ── */
+    document.querySelectorAll('[data-bs-target^="#kunde-"]').forEach(function(h) {
+        const chev = h.querySelector('.fa-chevron-down');
+        if (!chev) return;
+        const target = document.querySelector(h.getAttribute('data-bs-target'));
+        if (!target) return;
+        if (target.classList.contains('show')) chev.style.transform = 'rotate(0deg)';
+        else chev.style.transform = 'rotate(-90deg)';
+        target.addEventListener('show.bs.collapse', () => chev.style.transform = 'rotate(0deg)');
+        target.addEventListener('hide.bs.collapse', () => chev.style.transform = 'rotate(-90deg)');
     });
 
     /* ── Faktureringsopgaver ikoner ── */

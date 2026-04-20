@@ -672,10 +672,34 @@ def admin_panel():
     )
     faktureringsopgaver = _beregn_faktureringsopgaver(idag)
 
+    # Gruppér vundne projekter efter kunde (for kollapsibel UI)
+    vundne_per_kunde = {}
+    for tid, t in vundne.items():
+        kunde = t.get('kunde', '—') or '—'
+        vundne_per_kunde.setdefault(kunde, []).append((tid, t))
+    # Sortér kunder alfabetisk, projekter indenfor hver kunde efter nummer desc
+    vundne_grupper = []
+    for kunde in sorted(vundne_per_kunde.keys(), key=str.lower):
+        projekter = sorted(vundne_per_kunde[kunde], key=lambda x: -(x[1].get('nummer') or 0))
+        grp_total = 0
+        grp_fakt  = 0
+        for _, t in projekter:
+            grp_total += sum(float(p.get('antal',1))*float(p.get('pris',0)) for p in t.get('produkter',[]))
+            grp_fakt  += sum(float(f.get('beloeb',0)) for f in t.get('fakturaer',[]))
+        vundne_grupper.append({
+            'kunde':     kunde,
+            'projekter': projekter,
+            'total':     grp_total,
+            'faktureret': grp_fakt,
+            'antal':     len(projekter),
+            'valuta':    projekter[0][1].get('valuta', 'DKK') if projekter else 'DKK',
+        })
+
     return render_template('index.html',
                            produkter=load_data(PRODUKTER_FILE, []),
                            afventer=afventer,
                            vundne=vundne,
+                           vundne_grupper=vundne_grupper,
                            tabte=tabte,
                            arkiverede=arkiverede,
                            statistik_opdelt=statistik_opdelt,

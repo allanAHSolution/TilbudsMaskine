@@ -10,11 +10,16 @@ Dokumentation: https://api.dinero.dk/docs/
 
 import base64
 import json
+import logging
 import os
+import re
 import time
+from typing import Optional
 from urllib.parse import urlencode, quote
 
 import requests
+
+log = logging.getLogger(__name__)
 
 BASE_DIR       = os.path.dirname(os.path.abspath(__file__))
 CONFIG_FILE    = os.path.join(BASE_DIR, 'dinero_config.json')
@@ -238,3 +243,101 @@ def bogfør_faktura(guid, timestamp):
     if not res.ok:
         raise RuntimeError(f"Bogføring fejlede ({res.status_code}): {res.text[:400]}")
     return res.json()
+
+
+# ────────── KØBSBILAG VIA ENTRIES ──────────
+
+VALID_INT_CODES = {"INT-ADMIN", "INT-DRIFT", "INT-KONTOR", "INT-MARKETING", "INT-SALG", "INT-HISTORY"}
+_CODE_RE = re.compile(r'\[([A-Z]+-[A-Z0-9]+)\]')
+
+
+def parse_project_code(text: str) -> Optional[str]:
+    """
+    Udtrækker en [PROJ-XXX] eller [INT-XXX] kode fra en tekst.
+    Returnerer koden (uden firkantede parenteser) eller None.
+    """
+    if not text:
+        return None
+    m = _CODE_RE.search(text)
+    if not m:
+        return None
+    code = m.group(1)
+    if code.startswith("PROJ-"):
+        return code
+    if code.startswith("INT-"):
+        if code not in VALID_INT_CODES:
+            log.warning("Ukendt intern kode '%s' i tekst: %s", code, text[:80])
+        return code
+    return None
+
+
+def fetch_purchase_entries(from_date: str, to_date: str) -> list[dict]:
+    """
+    Henter alle bogførte entries i perioden og filtrerer til
+    Purchases + relevante manuelle poster (kto 2000-2999).
+
+    from_date/to_date: ISO-format 'YYYY-MM-DD'. Skal ligge i ét regnskabsår.
+    Returnerer liste af dicts med nøgler:
+        date, voucher_number, voucher_type, account, account_name,
+        description, amount, entry_guid, contact_guid, project_code
+    """
+    oid = _org_id()
+    try:
+        res = requests.get(
+            f"{API_BASE}/{oid}/entries",
+            headers=_headers(),
+            params={"fromDate": from_date, "toDate": to_date},
+            timeout=30,
+        )
+    except requests.Timeout:
+        raise RuntimeError("Dinero entries-timeout — prøv et kortere datointervald")
+
+    if res.status_code == 429:
+        raise RuntimeError("Dinero rate-limit nået — vent og prøv igen")
+    if res.status_code == 401:
+        global _token_cache
+        _token_cache = {"access_token": None, "expires_at": 0}
+        raise RuntimeError("Dinero auth-fejl — token er udløbet, prøv igen")
+    if not res.ok:
+        raise RuntimeError(f"Dinero entries fejlede ({res.status_code}): {res.text[:300]}")
+
+    raw = res.json()
+    entries = []
+    for e in raw:
+        vtype = e.get("VoucherType") or ""
+        amount = e.get("Amount", 0)
+        acct = e.get("AccountNumber", 0)
+        desc = e.get("Description") or ""
+        # Kun udgifter: Purchases, eller manuelle poster på konto 2000-2999
+        if vtype == "Purchases" and amount > 0:
+            pass  # inkluder
+        elif vtype == "manuel" and 2000 <= acct < 3000 and amount > 0:
+            pass  # inkluder (f.eks. kursdifferencer)
+        else:
+            continue
+
+        entries.append({
+            "date":           e.get("Date", ""),
+            "voucher_number": e.get("VoucherNumber"),
+            "voucher_type":   vtype,
+            "account":        acct,
+            "account_name":   e.get("AccountName", ""),
+            "description":    desc,
+            "amount":         amount,
+            "entry_guid":     e.get("EntryGuid"),
+            "contact_guid":   e.get("ContactGuid"),
+            "project_code":   parse_project_code(desc),
+        })
+    return entries
+
+
+def group_entries_by_project(entries: list[dict]) -> dict[str, list[dict]]:
+    """
+    Grupperer en liste entries efter project_code.
+    Entries uden gyldig kode havner under 'UNTAGGED'.
+    """
+    groups: dict[str, list[dict]] = {}
+    for e in entries:
+        key = e.get("project_code") or "UNTAGGED"
+        groups.setdefault(key, []).append(e)
+    return groups

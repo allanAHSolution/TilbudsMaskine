@@ -133,7 +133,12 @@
                 <div class="kpi-kort" style="background: #fffbeb; color: #b45309;">
                     <div class="kpi-label">Omkostninger</div>
                     <div class="kpi-value">{{ "{:,.0f}".format(total_omk) }}</div>
-                    <div class="kpi-sub">{{ t.projekt.omkostninger|length }} poster</div>
+                    <div class="kpi-sub">
+                        {% if dinero_omk %}{{ dinero_omk|length }} Dinero{% endif %}
+                        {% if dinero_omk and t.projekt.omkostninger %} + {% endif %}
+                        {% if t.projekt.omkostninger %}{{ t.projekt.omkostninger|length }} manuelle{% endif %}
+                        {% if not dinero_omk and not t.projekt.omkostninger %}0 poster{% endif %}
+                    </div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
@@ -247,9 +252,34 @@
                         </form>
                     </div>
 
-                    <!-- Omkostningsliste -->
+                    <!-- Dinero-syncede omkostninger -->
+                    {% if dinero_omk %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="section-label mb-0">
+                            <i class="fa fa-sync me-1"></i> Fra Dinero · {{ proj_code }}
+                        </div>
+                        <span class="small fw-bold" style="color:#b45309;">{{ "{:,.0f}".format(total_dinero) }} {{ t.valuta }}</span>
+                    </div>
+                    {% for e in dinero_omk %}
+                    <div class="omk-item" style="border-left-color:#0ea5e9; background:#f0f9ff;">
+                        <div class="d-flex justify-content-between align-items-center gap-2">
+                            <div style="min-width:0;">
+                                <div class="small fw-bold text-truncate">{{ e.description }}</div>
+                                <div style="font-size:0.72rem; color: var(--text-muted);">
+                                    {{ e.date }} · Dinero-bilag #{{ e.voucher_number }} · {{ e.account }}
+                                </div>
+                            </div>
+                            <span class="fw-bold" style="font-size:0.85rem; white-space:nowrap; color:#b45309;">
+                                {{ "{:,.0f}".format(e.amount) }} {{ t.valuta }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+
+                    <!-- Manuel omkostningsliste -->
                     {% if t.projekt.omkostninger %}
-                    <div class="section-label mb-2">Registrerede omkostninger</div>
+                    <div class="section-label mb-2 mt-3">Manuelt registrerede omkostninger</div>
                     {% for o in t.projekt.omkostninger|reverse %}
                     <div class="omk-item">
                         <div class="d-flex justify-content-between align-items-center gap-2">

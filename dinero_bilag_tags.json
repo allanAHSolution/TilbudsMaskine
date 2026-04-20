@@ -1,0 +1,632 @@
+{
+  "742fdc0d-5569-4c77-8363-e4803142e90f": {
+    "code": "PROJ-012",
+    "note": "Auto-tagged: Bildusjen/Kjeller",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "3a3a371f-a006-4dfc-9675-8a2543ede4ef": {
+    "code": "PROJ-012",
+    "note": "Auto-tagged: Bildusjen/Kjeller",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "304ad956-2bec-4479-8748-d9924761b9b1": {
+    "code": "INT-DRIFT",
+    "note": "Auto-tagged: Software/abonnement",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "df8113ff-e3b2-4a45-8e99-a8e691e61913": {
+    "code": "INT-DRIFT",
+    "note": "Auto-tagged: Parkering",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "1fda89d1-02b1-47d5-a37a-4766e4008066": {
+    "code": "INT-DRIFT",
+    "note": "Auto-tagged: Software/abonnement",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "0a4143d6-b9b9-494f-8c8d-5986be933a6d": {
+    "code": "INT-DRIFT",
+    "note": "Auto-tagged: Software/abonnement",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "dd760003-e5af-4e92-8372-b85b86c88d31": {
+    "code": "INT-DRIFT",
+    "note": "Auto-tagged: Software/abonnement",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "004e6243-85d2-4b63-8b81-62d25f5f4cd4": {
+    "code": "INT-DRIFT",
+    "note": "Auto-tagged: Software/abonnement",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "687e2d6c-f150-4b30-9086-ab5d84b84f9a": {
+    "code": "INT-DRIFT",
+    "note": "Auto-tagged: Software/abonnement",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "39edbf19-5fa9-4567-8a44-3626dae3c02f": {
+    "code": "INT-DRIFT",
+    "note": "Auto-tagged: Software/abonnement",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "a9c7e5b1-2d7f-4963-9b37-ea2c8ed8081d": {
+    "code": "INT-DRIFT",
+    "note": "Auto-tagged: Software/abonnement",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "4ad976e3-9e45-4814-867a-db222395bbbe": {
+    "code": "INT-DRIFT",
+    "note": "Auto-tagged: Software/abonnement",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "418338b5-7d70-4d04-a9a8-32dcea0d1300": {
+    "code": "INT-DRIFT",
+    "note": "Auto-tagged: Software/abonnement",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "7f978eb2-7aef-448d-8e6a-39b2ad67bde6": {
+    "code": "INT-DRIFT",
+    "note": "Auto-tagged: Software/abonnement",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "2728d10a-5130-4a41-87f8-ac358847a388": {
+    "code": "INT-DRIFT",
+    "note": "Auto-tagged: Software/abonnement",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "d80197db-039d-4342-bf95-64a7790d6ebc": {
+    "code": "INT-DRIFT",
+    "note": "Auto-tagged: Software/abonnement",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "6b458334-9b8a-4a4f-a698-8fb7fcdacf80": {
+    "code": "INT-DRIFT",
+    "note": "Auto-tagged: Software/abonnement",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "40d8cc71-f259-4889-8ccd-79793e33acab": {
+    "code": "INT-DRIFT",
+    "note": "Auto-tagged: Software/abonnement",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "402a3023-18af-409e-b446-355c4a217d24": {
+    "code": "INT-DRIFT",
+    "note": "Auto-tagged: Software/abonnement",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "499c3c27-323a-4309-9317-c3be4b42209d": {
+    "code": "INT-DRIFT",
+    "note": "Auto-tagged: Software/abonnement",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "4ed2fb31-675d-4a95-83aa-4988b720125f": {
+    "code": "INT-DRIFT",
+    "note": "Auto-tagged: Software/abonnement",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "938be462-8d7b-4c28-b3b4-8aaa3e493a20": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Kursdifference",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "4c0f994b-2d19-4734-8a4d-9c47d213bbe1": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Kursdifference",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "1a0be70a-0ef6-48a8-b5e1-6e530083ccee": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Kursdifference",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "3a3155a3-7340-44db-9cec-f5fdf9991f70": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Kursdifference",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "a4e282db-412f-4263-a18c-ddd305eda288": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Kursdifference",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "68355109-7e2f-4bb2-a3a8-150df753ec05": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Kursdifference",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "6abf2948-dd1d-481a-aa90-f927f93ec069": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Kursdifference",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "f86ef9b5-bf19-44fc-94c5-65fd656968c0": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Kursdifference",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "f1a12c5b-9223-4b93-9838-89a2bbe9a427": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Invest.konto",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "b41104b8-1d90-40f9-b280-46882ad55b2e": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Forsikring",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "57388260-35d0-4b74-9fc3-46c1da8f7aef": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "4962e332-2459-47b2-b07b-0f69eb8f3fad": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "20ab07c4-c2d8-4bf9-9d36-f4e55cb7540d": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "855f60b3-c12e-4af1-8dae-15dbf3100c5d": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "0e15db85-d037-44ce-b40b-fe14f046126d": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "4b0c4f62-591c-4465-98e3-69a6fd0e93e0": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "69172877-6e9c-4c6e-97f0-67a1a025afa3": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "193877a4-28cf-45a9-ae4c-b40b0b0d7b6b": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "de78af1d-0547-484e-a209-c9da4ab8fde5": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "5ccd8efc-afbc-4954-8dcb-fe4a5b2a75ef": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "da5a534f-777c-43d2-8ca8-9f26e09415df": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "9f644983-3a0a-4635-acae-59a3c270494d": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "4b0fee79-3cc8-4c9d-b609-89bc84307c2b": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "0b4310a0-46ce-4dcc-9eec-1281f5c19118": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "a7531921-a3df-4f00-abcb-4ee1031deafd": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "9c2b4cc1-cb80-480e-ab72-e025332ad240": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "98ee78ee-cb83-4231-bc5e-0c11fa9b6a0a": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "06ea9cd3-08be-4819-b2ae-29316e06f4d9": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "42d905e8-839c-4aee-ba70-2ffc230bc90a": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "3af004ae-9e25-41e2-bd05-5bc96d0a7e65": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "5d5ae6f0-1b66-4b90-b083-798a2fe8aca0": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "b056c71e-7a3d-4660-be50-37d6efb4877a": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "04d515a1-b473-4f08-acf2-8caeaddb8450": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "5ad7f1f1-ad40-4b60-9afb-ad3cfe810f32": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "5ef5255f-6879-4b29-bef2-f0b2980b3513": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "cbca7713-4fd4-4cc9-85ff-d2ade75f0435": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "7f0c0813-3220-43ad-9cd3-a4bb1a1272bf": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "2bc6918b-ee31-44ec-b46d-e4ae7f37d34c": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "891fd03c-1baa-4317-874a-7085bd591f74": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "3e29f71d-e7f2-4b73-809f-c608a913d583": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "bcf8d394-4035-4b99-b7bc-de4a2a9bca24": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "c51c2005-2fdb-4c3f-9647-b049fe05a413": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "2ad1f7f9-0010-4454-ad51-d9c58611b93f": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "98afa13a-e945-4aa1-add0-ea6bb96eb5c5": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "b4996ede-e3e4-4ef3-a5a9-5314553f9901": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "44c91736-f267-4061-8cfb-98e8ce4ee5b5": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Bankgebyr",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "902497b7-a2d7-4290-8d91-4cff3a82d8b7": {
+    "code": "INT-ADMIN",
+    "note": "Auto-tagged: Invest.konto",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "01d7f3a2-e42d-44de-9b7a-f40f109dd567": {
+    "code": "INT-KONTOR",
+    "note": "Auto-tagged: Husleje",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "3171a710-7e55-42fb-bafd-0a34967c8777": {
+    "code": "INT-KONTOR",
+    "note": "Auto-tagged: Rengøring",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "1ee5307a-dd3d-468a-9a7d-bda61dd06348": {
+    "code": "INT-KONTOR",
+    "note": "Auto-tagged: Rengøring",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "88361a6a-1232-485d-b607-0b7b69be1050": {
+    "code": "INT-KONTOR",
+    "note": "Auto-tagged: Rengøring",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "cef9bc44-d83e-4821-94cf-c264c2dfa036": {
+    "code": "INT-KONTOR",
+    "note": "Auto-tagged: Rengøring",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "10018173-8bc5-4949-9724-9156c297deeb": {
+    "code": "INT-KONTOR",
+    "note": "Auto-tagged: Rengøring",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "53700f40-cb6f-4317-8c3e-f7b41fa76b25": {
+    "code": "INT-KONTOR",
+    "note": "Auto-tagged: Rengøring",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "ff7d37c9-48c6-4652-8edb-5e11e888d36b": {
+    "code": "INT-KONTOR",
+    "note": "Auto-tagged: Rengøring",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "5392cccf-730f-47ee-b780-e110b20f273a": {
+    "code": "INT-KONTOR",
+    "note": "Auto-tagged: Husleje",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "bffb4b51-8d9d-44a2-9b39-492e9fe6161d": {
+    "code": "INT-KONTOR",
+    "note": "Auto-tagged: Rengøring",
+    "assigned_at": "2026-04-20 08:19"
+  },
+  "4ab67e5a-8565-45f2-9f12-9288ecbcdc2c": {
+    "code": "PROJ-014",
+    "note": "Auto-tagged: indeholder 'Munkhaughjørnet'",
+    "assigned_at": "2026-04-20 08:31"
+  },
+  "551392ee-0b54-4567-9ff5-f3824010dbcd": {
+    "code": "PROJ-014",
+    "note": "Auto-tagged: indeholder 'Munkhaughjørnet'",
+    "assigned_at": "2026-04-20 08:31"
+  },
+  "9a90f49d-6298-4258-abda-6a49664ff4ec": {
+    "code": "PROJ-014",
+    "note": "Auto-tagged: indeholder 'Munkhaughjørnet'",
+    "assigned_at": "2026-04-20 08:31"
+  },
+  "5f6549fd-3fec-4dbe-a876-9d6fde8bf45e": {
+    "code": "PROJ-014",
+    "note": "Auto-tagged: indeholder 'Munkhaughjørnet'",
+    "assigned_at": "2026-04-20 08:31"
+  },
+  "066ad41b-4bdc-45e0-b5cd-b2e01dad9369": {
+    "code": "PROJ-015",
+    "note": "Auto-tagged: indeholder 'Nygaardskrysset'",
+    "assigned_at": "2026-04-20 08:31"
+  },
+  "9ae08da2-6aa7-4fc4-84b1-ab0e1cc4a5d6": {
+    "code": "PROJ-015",
+    "note": "Auto-tagged: indeholder 'Nygaardskrysset'",
+    "assigned_at": "2026-04-20 08:31"
+  },
+  "1118c6c4-a4c2-4cd2-870e-8e7b7c1c5ae0": {
+    "code": "PROJ-015",
+    "note": "Auto-tagged: indeholder 'Nygaardskrysset'",
+    "assigned_at": "2026-04-20 08:31"
+  },
+  "8d9b6615-650f-40fd-9705-58f82e24bcd9": {
+    "code": "PROJ-015",
+    "note": "Auto-tagged: indeholder 'Nygaardskrysset'",
+    "assigned_at": "2026-04-20 08:31"
+  },
+  "55f7464c-b131-4342-8e26-255b610f6450": {
+    "code": "PROJ-016",
+    "note": "Auto-tagged: hjulvogne",
+    "assigned_at": "2026-04-20 08:36"
+  },
+  "fcff21f3-9ac8-40d5-875b-7d0460d54ba9": {
+    "code": "PROJ-016",
+    "note": "Auto-tagged: hjulvogne",
+    "assigned_at": "2026-04-20 08:36"
+  },
+  "be5ec84e-a611-445e-8820-f2dd3293426f": {
+    "code": "INT-SALG",
+    "note": "Auto-tagged: salgsomkostning (rejse/hotel/fly)",
+    "assigned_at": "2026-04-20 08:43"
+  },
+  "86b92d19-6f59-4c8c-93e5-aa92e55cef71": {
+    "code": "INT-SALG",
+    "note": "Auto-tagged: salgsomkostning (rejse/hotel/fly)",
+    "assigned_at": "2026-04-20 08:43"
+  },
+  "de550db1-25da-41c5-90fd-a5b6c510a4e9": {
+    "code": "INT-SALG",
+    "note": "Auto-tagged: salgsomkostning (rejse/hotel/fly)",
+    "assigned_at": "2026-04-20 08:43"
+  },
+  "40ee1dbb-2acb-4d7f-a475-3a358cc16a83": {
+    "code": "INT-SALG",
+    "note": "Auto-tagged: salgsomkostning (rejse/hotel/fly)",
+    "assigned_at": "2026-04-20 08:43"
+  },
+  "ddae524f-2203-4a9a-8a35-3627f0a3360a": {
+    "code": "INT-SALG",
+    "note": "Auto-tagged: salgsomkostning (rejse/hotel/fly)",
+    "assigned_at": "2026-04-20 08:43"
+  },
+  "2839dd3d-5cc9-40b7-b0a3-e7ef9e6ee9eb": {
+    "code": "INT-SALG",
+    "note": "Auto-tagged: salgsomkostning (rejse/hotel/fly)",
+    "assigned_at": "2026-04-20 08:43"
+  },
+  "5a42fe97-531e-48e3-a6b3-1e7eb3d8f0d8": {
+    "code": "INT-SALG",
+    "note": "Auto-tagged: salgsomkostning (rejse/hotel/fly)",
+    "assigned_at": "2026-04-20 08:43"
+  },
+  "4be8e50e-fb9d-4e5f-a5ef-f22f91512fd4": {
+    "code": "INT-SALG",
+    "note": "Auto-tagged: salgsomkostning (rejse/hotel/fly)",
+    "assigned_at": "2026-04-20 08:43"
+  },
+  "a50676f7-2a69-4405-adb4-c47b2c2a4a3c": {
+    "code": "INT-SALG",
+    "note": "Auto-tagged: salgsomkostning (rejse/hotel/fly)",
+    "assigned_at": "2026-04-20 08:43"
+  },
+  "de301287-4528-40ec-b269-a8dbef20e928": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "5864b8b6-c8d7-49e8-8742-a00ea789b658": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "d18b0b1e-21cc-4ce0-8c61-aa4502813203": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "13049731-0098-441d-93e9-22eea91fa9d7": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "f05e3a12-81ca-4a6f-aa42-d05120a5b825": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "ca5f18f9-e331-41b8-bd32-c3b81c99c087": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "68249c60-cd83-47e4-8f44-9f9eeb27a8fb": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "648f423b-d430-4b21-b37b-176c4e24f003": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "dc20a2bb-5805-4aa1-af07-9461aeff2c7b": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "0bd9eea6-35a9-4e6a-9dee-86ba945716f9": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "6fd16897-15f2-4739-bcba-f54513a03e8d": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "cbd6b699-319d-4ed8-97fe-9e2a7d9d15dd": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "99bd0500-519f-4ac3-b5ec-7873a920b5b6": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "84e19ecd-7d89-4b6b-a897-f255e2b58624": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "d4df4e0a-d1ce-4755-8fea-a64beaa1e3b8": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "c235230f-3e1b-42a7-88b3-9f07338e24e5": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "16991a28-f928-4e45-a0f9-065a08571c77": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "234dcd0d-feea-42e2-b2d2-a59780dc30e6": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "9a77989f-5742-41da-a006-01a0d08d7a01": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "16cb6327-f465-446b-b316-6d98247a0a94": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "b2716896-d196-4c39-80bf-00e703caad26": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "7662813a-812a-4cd3-9cd8-efe154a98c20": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "fcacfb94-00ea-4442-8d99-c80a168ea244": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "34300d30-9223-4f16-8405-9c4e78c447e5": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "d097d900-19ab-4d2b-a99a-894f7150eb41": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "bf7a895d-8838-43da-83c4-9e44162ca833": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "7e57eba4-898e-4261-b26a-2003b63fe9f4": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "2d97f713-4556-4ad2-bd3e-d67e674ad7bc": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  },
+  "8ec2ec9e-47b9-4964-9fc4-05123b8d719e": {
+    "code": "INT-HISTORY",
+    "note": "Bulk-arkiveret som historik",
+    "assigned_at": "2026-04-20 08:46"
+  }
+}

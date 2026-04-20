@@ -25,6 +25,7 @@ LEVERANDOERER_FILE = os.path.join(BASE_DIR, 'leverandoerer.json')
 INDSTILLINGER_FILE = os.path.join(BASE_DIR, 'indstillinger.json')
 MALTE_FILE         = os.path.join(BASE_DIR, 'malte_aftale.json')
 UNOX_FILE          = os.path.join(BASE_DIR, 'unox_aftale.json')
+DINERO_TAGS_FILE   = os.path.join(BASE_DIR, 'dinero_bilag_tags.json')
 
 ADMIN_USER = "allan"
 ADMIN_PASS = "ahsolution-Gjern-26"
@@ -419,7 +420,91 @@ def dinero_sync():
                 f['dinero_fejl'] = str(e)[:200]
                 fejl += 1
     save_data(TILBUD_FILE, all_data)
-    return f"✓ Opdateret {opdateret} fakturaer ({fejl} fejl). <a href='/admin'>Tilbage</a>"
+    return redirect(url_for('dinero_omkostninger'))
+
+
+def _anvend_lokale_tags(entries, tags):
+    """
+    Lægger lokale ERP-tags oven på entries. Lokal tag vinder over tekst-kode.
+    Returnerer entries med opdateret 'project_code' og 'source'-felt
+    ('local' eller 'dinero' eller None).
+    """
+    for e in entries:
+        guid = e.get('entry_guid')
+        if guid and guid in tags:
+            e['project_code'] = tags[guid].get('code')
+            e['tag_source']   = 'local'
+            e['tag_note']     = tags[guid].get('note', '')
+        elif e.get('project_code'):
+            e['tag_source'] = 'dinero'
+        else:
+            e['tag_source'] = None
+    return entries
+
+
+def _projekt_map(all_data):
+    """Byg PROJ-XXX → tilbud dict for matching."""
+    pm = {}
+    for tid, t in all_data.items():
+        if t.get('vundet') and not t.get('slettet'):
+            code = f"PROJ-{t.get('nummer', 0):03d}"
+            pm[code] = {'id': tid, 'kunde': t.get('kunde', ''), 'nummer': t.get('nummer', 0)}
+    return pm
+
+
+@app.route('/dinero/omkostninger')
+def dinero_omkostninger():
+    """Viser alle købsposter fra Dinero grupperet efter projektkode."""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    if not DINERO_OK:
+        return redirect(url_for('admin_panel'))
+
+    aar = datetime.now().year
+    try:
+        entries = dinero_api.fetch_purchase_entries(f'{aar}-01-01', datetime.now().strftime('%Y-%m-%d'))
+    except Exception as e:
+        return f"Fejl ved hentning: {e} <a href='/admin'>Tilbage</a>", 500
+
+    tags = load_data(DINERO_TAGS_FILE, {})
+    entries = _anvend_lokale_tags(entries, tags)
+    groups = dinero_api.group_entries_by_project(entries)
+
+    all_data = load_data(TILBUD_FILE, {})
+    projekt_map = _projekt_map(all_data)
+
+    return render_template('dinero_omkostninger.html',
+                           groups=groups,
+                           projekt_map=projekt_map,
+                           total_entries=len(entries),
+                           aar=aar)
+
+
+@app.route('/dinero/bilag/tag', methods=['POST'])
+def dinero_bilag_tag():
+    """Gemmer et lokalt ERP-tag på et Dinero-bilag (kan ikke rettes i Dinero bagefter)."""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+    guid = request.form.get('entry_guid', '').strip()
+    code = request.form.get('code', '').strip()
+    note = request.form.get('note', '').strip()
+
+    if not guid:
+        return redirect(url_for('dinero_omkostninger'))
+
+    tags = load_data(DINERO_TAGS_FILE, {})
+    if not code:
+        # Tom kode = fjern tag
+        tags.pop(guid, None)
+    else:
+        tags[guid] = {
+            "code":        code,
+            "note":        note,
+            "assigned_at": datetime.now().strftime('%Y-%m-%d %H:%M'),
+        }
+    save_data(DINERO_TAGS_FILE, tags)
+    return redirect(url_for('dinero_omkostninger'))
 
 
 @app.route('/dinero/test')
@@ -754,10 +839,26 @@ def projekt_side(tilbud_id):
         t['projekt'] = {"oprettet": datetime.now().strftime('%d-%m-%Y'), "omkostninger": [], "noter": ""}
         save_data(TILBUD_FILE, all_data)
 
-    budget       = _projekt_budget(t)
-    faktureret   = sum(float(f.get('beloeb', 0)) for f in t.get('fakturaer', []))
-    omkostninger = t['projekt'].get('omkostninger', [])
-    total_omk    = sum(float(o.get('beloeb', 0)) for o in omkostninger)
+    budget         = _projekt_budget(t)
+    faktureret     = sum(float(f.get('beloeb', 0)) for f in t.get('fakturaer', []))
+    omkostninger   = t['projekt'].get('omkostninger', [])
+    total_manuel   = sum(float(o.get('beloeb', 0)) for o in omkostninger)
+
+    # Hent også Dinero-syncede omkostninger tagget til dette projekt
+    dinero_omk = []
+    proj_code  = f"PROJ-{t.get('nummer', 0):03d}"
+    if DINERO_OK:
+        try:
+            aar = datetime.now().year
+            entries = dinero_api.fetch_purchase_entries(f'{aar}-01-01', datetime.now().strftime('%Y-%m-%d'))
+            tags = load_data(DINERO_TAGS_FILE, {})
+            entries = _anvend_lokale_tags(entries, tags)
+            dinero_omk = [e for e in entries if e.get('project_code') == proj_code]
+        except Exception:
+            pass  # fejl ignoreres — manuelle tal vises stadig
+
+    total_dinero = sum(e['amount'] for e in dinero_omk)
+    total_omk    = total_manuel + total_dinero
     margin       = faktureret - total_omk
 
     return render_template('projekt.html',
@@ -765,6 +866,10 @@ def projekt_side(tilbud_id):
                            budget=budget,
                            faktureret=faktureret,
                            total_omk=total_omk,
+                           total_manuel=total_manuel,
+                           total_dinero=total_dinero,
+                           dinero_omk=dinero_omk,
+                           proj_code=proj_code,
                            margin=margin,
                            now_date=datetime.now().strftime('%Y-%m-%d'))
 

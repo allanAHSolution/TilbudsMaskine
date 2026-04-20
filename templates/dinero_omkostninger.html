@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dinero omkostninger | AhSolution ERP</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/font-awesome.min.css">
+    <style>
+        :root {
+            --accent: #1e325a;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --yellow: #f59e0b;
+            --yellow-lt: #fffbeb;
+            --red: #dc2626;
+            --green: #059669;
+        }
+        body { background:#f4f7f9; color:var(--text-dark); font-family:'Inter',system-ui,sans-serif; padding-bottom:60px; }
+        .navbar { background:#fff; border-bottom:1px solid var(--border); padding:16px 0; }
+        .navbar-brand img { height:48px; }
+        .card { background:#fff; border:1px solid var(--border); border-radius:12px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.04); margin-bottom:20px; }
+        .section-label { font-size:0.65rem; text-transform:uppercase; letter-spacing:1.5px; color:var(--text-muted); font-weight:700; }
+        .gruppe-header {
+            padding:14px 18px;
+            border-radius:10px 10px 0 0;
+            background:linear-gradient(135deg,#1e325a,#334980);
+            color:white;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+        }
+        .gruppe-header.untagged { background:linear-gradient(135deg,#dc2626,#ef4444); }
+        .gruppe-header.intern   { background:linear-gradient(135deg,#7c3aed,#a78bfa); }
+        .gruppe-header.history  { background:linear-gradient(135deg,#475569,#64748b); }
+        .entry-row {
+            padding:8px 16px;
+            border-bottom:1px solid var(--border);
+            font-size:0.82rem;
+            display:grid;
+            grid-template-columns: 95px 65px 1fr 110px 100px 180px;
+            gap:10px;
+            align-items:center;
+        }
+        .entry-row:last-child { border-bottom:none; }
+        .entry-row:hover { background:#f8fafc; }
+        .entry-amount { font-weight:700; text-align:right; color:#b45309; }
+        .tag-form select, .tag-form input {
+            font-size: 0.72rem;
+            padding: 2px 6px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: white;
+        }
+        .tag-form { display: flex; gap: 4px; align-items: center; }
+        .tag-form select { flex: 1; min-width: 0; }
+        .source-badge {
+            display: inline-block;
+            font-size: 0.6rem;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            vertical-align: middle;
+        }
+        .source-local  { background: #dbeafe; color: #1e40af; }
+        .source-dinero { background: #e0e7ff; color: #3730a3; }
+        .kode-badge {
+            font-family: ui-monospace, monospace;
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar sticky-top mb-4">
+    <div class="container d-flex justify-content-between align-items-center">
+        <a href="/" class="navbar-brand"><img src="/static/logo.png" alt="AhSolution"></a>
+        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:2px;color:var(--accent);font-weight:700;" class="d-none d-md-block">Dinero omkostninger {{ aar }}</div>
+        <div class="d-flex gap-2">
+            <a href="/dinero/sync" class="btn btn-sm" style="background:#111827;color:white;"><i class="fa fa-sync me-1"></i> Gen-sync</a>
+            <a href="/admin" class="btn btn-sm btn-outline-secondary"><i class="fa fa-arrow-left me-1"></i> Dashboard</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+
+    <!-- Info-boks -->
+    <div class="card p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <div class="fw-bold" style="color:var(--accent); font-size:1rem;">
+                    <i class="fa fa-receipt me-1"></i> Købsposter fra Dinero
+                </div>
+                <div class="small" style="color:var(--text-muted);">
+                    {{ total_entries }} poster fundet i {{ aar }} · grupperet efter kode i Dinero-teksten
+                </div>
+            </div>
+            <div class="text-end">
+                {% set grand = namespace(total=0) %}
+                {% for code, items in groups.items() %}
+                    {% for e in items %}{% set grand.total = grand.total + e.amount %}{% endfor %}
+                {% endfor %}
+                <div class="small" style="color:var(--text-muted);">I alt i {{ aar }}</div>
+                <div class="fw-bold" style="font-size:1.4rem; color:#b45309;">{{ "{:,.0f}".format(grand.total) }} kr</div>
+            </div>
+        </div>
+        <hr>
+        <div class="small" style="color:var(--text-muted);">
+            <strong>Tag bilag her</strong> (Dinero låser bilag efter bogføring). Brug dropdown'en ud for hver UNTAGGED post.
+            Nye bilag du opretter i Dinero kan stadig tagges via koden i Beskrivelse-feltet: <code>[PROJ-013]</code>, <code>[INT-ADMIN]</code>, osv.
+        </div>
+    </div>
+
+    <!-- Advarsel om UNTAGGED -->
+    {% if 'UNTAGGED' in groups %}
+    {% set ut = groups['UNTAGGED'] %}
+    {% set ut_sum = namespace(total=0) %}
+    {% for e in ut %}{% set ut_sum.total = ut_sum.total + e.amount %}{% endfor %}
+    <div class="alert mb-4" style="background:#fef2f2; border:1px solid #fecaca; color:#991b1b;">
+        <i class="fa fa-exclamation-triangle me-2"></i>
+        <strong>{{ ut|length }} bilag uden kode</strong> ({{ "{:,.0f}".format(ut_sum.total) }} kr).
+        Gå ind i Dinero og tilføj fx <code>[PROJ-013]</code> til teksten, eller brug en intern kode.
+    </div>
+    {% endif %}
+
+    <!-- Sortér: PROJ først, så INT, til sidst UNTAGGED -->
+    {% set sorted_codes = [] %}
+    {% for code in groups.keys()|sort %}
+        {% if code.startswith('PROJ-') %}{% set _ = sorted_codes.append(code) %}{% endif %}
+    {% endfor %}
+    {% for code in groups.keys()|sort %}
+        {% if code.startswith('INT-') %}{% set _ = sorted_codes.append(code) %}{% endif %}
+    {% endfor %}
+    {% if 'UNTAGGED' in groups %}{% set _ = sorted_codes.append('UNTAGGED') %}{% endif %}
+
+    {% for code in sorted_codes %}
+    {% set items = groups[code] %}
+    {% set gruppe_sum = namespace(total=0) %}
+    {% for e in items %}{% set gruppe_sum.total = gruppe_sum.total + e.amount %}{% endfor %}
+
+    <div class="card p-0 mb-4">
+        <div class="gruppe-header {{ 'untagged' if code == 'UNTAGGED' else ('history' if code == 'INT-HISTORY' else ('intern' if code.startswith('INT-') else '')) }}">
+            <div>
+                <span class="kode-badge">{{ code }}</span>
+                {% if code.startswith('PROJ-') and code in projekt_map %}
+                    <span class="ms-2 fw-bold">{{ projekt_map[code].kunde }}</span>
+                    <span class="ms-2" style="opacity:0.7; font-size:0.8rem;">#{{ projekt_map[code].nummer }}</span>
+                {% elif code == 'UNTAGGED' %}
+                    <span class="ms-2 fw-bold">Ingen kode angivet</span>
+                {% elif code.startswith('INT-') %}
+                    <span class="ms-2 fw-bold">
+                        {% if code == 'INT-ADMIN' %}Administration (revisor, forsikring)
+                        {% elif code == 'INT-DRIFT' %}Drift (software, hosting, abonnementer)
+                        {% elif code == 'INT-KONTOR' %}Kontor (artikler, husleje, strøm)
+                        {% elif code == 'INT-SALG' %}Salgsomkostninger (rejser, hotel, flybilletter)
+                        {% elif code == 'INT-MARKETING' %}Marketing (reklame, hjemmeside, SoMe)
+                        {% elif code == 'INT-HISTORY' %}Historik (utagget fra før systemet)
+                        {% else %}Ukendt intern kode{% endif %}
+                    </span>
+                {% else %}
+                    <span class="ms-2 fw-bold">{{ code }}</span>
+                {% endif %}
+            </div>
+            <div class="text-end">
+                <div style="font-size:0.7rem; opacity:0.8;">{{ items|length }} poster</div>
+                <div style="font-size:1.15rem; font-weight:800;">{{ "{:,.0f}".format(gruppe_sum.total) }} kr</div>
+            </div>
+        </div>
+
+        <div style="padding: 8px 0;">
+            <div class="entry-row" style="background:#f8fafc; font-weight:700; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.8px; color:var(--text-muted);">
+                <div>Dato</div>
+                <div>Bilag</div>
+                <div>Beskrivelse</div>
+                <div>Konto</div>
+                <div style="text-align:right;">Beløb</div>
+                <div>Tag</div>
+            </div>
+            {% for e in items %}
+            <div class="entry-row">
+                <div>{{ e.date }}</div>
+                <div>#{{ e.voucher_number }}</div>
+                <div>
+                    {{ e.description }}
+                    {% if e.tag_source == 'local' %}
+                        <span class="source-badge source-local" title="Tagget i ERP">ERP</span>
+                    {% elif e.tag_source == 'dinero' %}
+                        <span class="source-badge source-dinero" title="Tag fra Dinero-tekst">DINERO</span>
+                    {% endif %}
+                </div>
+                <div style="font-size:0.72rem; color:var(--text-muted);">{{ e.account }} · {{ e.account_name }}</div>
+                <div class="entry-amount">{{ "{:,.0f}".format(e.amount) }} kr</div>
+                <div>
+                    <form action="/dinero/bilag/tag" method="POST" class="tag-form">
+                        <input type="hidden" name="entry_guid" value="{{ e.entry_guid }}">
+                        <select name="code" onchange="this.form.submit()">
+                            <option value="">— vælg —</option>
+                            <optgroup label="Projekter">
+                                {% for kode, info in projekt_map.items()|sort %}
+                                <option value="{{ kode }}" {{ 'selected' if code == kode }}>{{ kode }} {{ info.kunde[:20] }}</option>
+                                {% endfor %}
+                            </optgroup>
+                            <optgroup label="Interne">
+                                <option value="INT-ADMIN"     {{ 'selected' if code == 'INT-ADMIN' }}>INT-ADMIN (admin)</option>
+                                <option value="INT-DRIFT"     {{ 'selected' if code == 'INT-DRIFT' }}>INT-DRIFT (drift)</option>
+                                <option value="INT-KONTOR"    {{ 'selected' if code == 'INT-KONTOR' }}>INT-KONTOR (kontor)</option>
+                                <option value="INT-SALG"      {{ 'selected' if code == 'INT-SALG' }}>INT-SALG (salg/rejser)</option>
+                                <option value="INT-MARKETING" {{ 'selected' if code == 'INT-MARKETING' }}>INT-MARKETING</option>
+                                <option value="INT-HISTORY"   {{ 'selected' if code == 'INT-HISTORY' }}>INT-HISTORY (arkiv/historik)</option>
+                            </optgroup>
+                        </select>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+
+            {% if code.startswith('PROJ-') and code in projekt_map %}
+            <div class="text-end p-2" style="background:#f8fafc;">
+                <a href="/projekt/{{ projekt_map[code].id }}" class="btn btn-sm fw-bold" style="background:var(--accent); color:white;">
+                    Åbn projekt <i class="fa fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+
+    {% if not groups %}
+    <div class="card p-5 text-center" style="color:var(--text-muted);">
+        <i class="fa fa-inbox fa-3x mb-3" style="color:#cbd5e1;"></i>
+        <div>Ingen købsposter fundet i {{ aar }}</div>
+    </div>
+    {% endif %}
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

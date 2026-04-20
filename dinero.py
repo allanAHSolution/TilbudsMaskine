@@ -176,15 +176,25 @@ def find_eller_opret_kontakt(navn, email=""):
 
 # ────────── FAKTURAER ──────────
 def opret_faktura(kunde_navn, linjer, dato=None, valuta="DKK",
-                  kommentar="", kontakt_email=""):
+                  kommentar="", beskrivelse=None, kontakt_email="",
+                  moms="ja"):
     """
     Opretter en faktura-kladde i Dinero.
 
     linjer: liste af dicts med keys: beskrivelse, antal, enhedspris (DKK).
+    moms: 'ja' → konto 1000 (m/moms), 'nej' → konto 1050 (u/moms).
+    Ikke-DKK valuta tvinger altid konto 1050 (eksport).
+    beskrivelse: titlen på fakturaen (synlig i Dinero-kladde). Hvis None,
+                 bruges kommentar som fallback.
+
     Returnerer (guid, timestamp) — guid bruges til senere opslag/bogføring.
     """
     oid = _org_id()
     contact_id = find_eller_opret_kontakt(kunde_navn, kontakt_email)
+
+    # Vælg salgskonto: 1000 m/moms, 1050 u/moms (eksport)
+    eksport = valuta.upper() != "DKK"
+    konto = 1000 if (moms == "ja" and not eksport) else 1050
 
     product_lines = []
     for l in linjer:
@@ -192,17 +202,18 @@ def opret_faktura(kunde_navn, linjer, dato=None, valuta="DKK",
             "ProductGuid":       None,
             "Description":       l.get("beskrivelse", ""),
             "Quantity":          float(l.get("antal", 1) or 1),
-            "AccountNumber":     1000,  # Varesalg - tilpas om nødvendigt
+            "AccountNumber":     konto,
             "Unit":              "parts",
             "BaseAmountValue":   float(l.get("enhedspris", 0) or 0),
             "LineType":          "Product",
         })
 
+    desc = beskrivelse or kommentar
     payload = {
         "Currency":         valuta,
         "Language":         "da-DK",
-        "ExternalReference": kommentar,
-        "Description":      kommentar,
+        "ExternalReference": desc,
+        "Description":      desc,
         "Comment":          kommentar,
         "Date":             dato or time.strftime("%Y-%m-%d"),
         "ContactGuid":      contact_id,

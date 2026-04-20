@@ -416,12 +416,16 @@ def dinero_sync():
                     except ValueError:
                         dato_iso = datetime.now().strftime('%Y-%m-%d')
                     linjer = [{"beskrivelse": beskrivelse, "antal": 1, "enhedspris": float(f.get('beloeb', 0))}]
+                    site_str = f" · {t.get('site').strip()}" if t.get('site') else ''
+                    titel    = f"#{t.get('nummer')} {t.get('kunde','')}{site_str} — {beskrivelse}"
                     new_guid, ts = dinero_api.opret_faktura(
                         kunde_navn=t.get('kunde', ''),
                         linjer=linjer,
                         dato=dato_iso,
                         valuta=t.get('valuta', 'DKK'),
-                        kommentar=f"Tilbud #{t.get('nummer')} — {beskrivelse}",
+                        moms=t.get('moms', 'ja'),
+                        beskrivelse=titel,
+                        kommentar=titel,
                     )
                     f['dinero_guid']      = new_guid
                     f['dinero_timestamp'] = ts
@@ -1215,12 +1219,16 @@ def faktura_tilfoej(tilbud_id):
                 "antal":       1,
                 "enhedspris":  beloeb,
             }]
+            site_str = f" · {t.get('site').strip()}" if t.get('site') else ''
+            titel    = f"#{t.get('nummer')} {t.get('kunde','')}{site_str} — {beskrivelse}"
             guid, ts = dinero_api.opret_faktura(
                 kunde_navn=t.get('kunde', ''),
                 linjer=linjer,
                 dato=dato_iso,
                 valuta=t.get('valuta', 'DKK'),
-                kommentar=f"Tilbud #{t.get('nummer')} — {beskrivelse}",
+                moms=t.get('moms', 'ja'),
+                beskrivelse=titel,
+                kommentar=titel,
             )
             faktura["dinero_guid"]      = guid
             faktura["dinero_timestamp"] = ts

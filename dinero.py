@@ -272,7 +272,7 @@ def bogfør_faktura(guid, timestamp):
 
 # ────────── KØBSBILAG VIA ENTRIES ──────────
 
-VALID_INT_CODES = {"INT-ADMIN", "INT-DRIFT", "INT-KONTOR", "INT-MARKETING", "INT-SALG", "INT-HISTORY"}
+VALID_INT_CODES = {"INT-ADMIN", "INT-DRIFT", "INT-KONTOR", "INT-MARKETING", "INT-SALG", "INT-PERSONALE", "INT-HISTORY"}
 _CODE_RE = re.compile(r'\[([A-Z]+-[A-Z0-9]+)\]')
 
 

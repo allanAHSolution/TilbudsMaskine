@@ -628,5 +628,105 @@
     "code": "INT-HISTORY",
     "note": "Bulk-arkiveret som historik",
     "assigned_at": "2026-04-20 08:46"
+  },
+  "abf97fda-0b58-4aaa-ad89-940004acd971": {
+    "code": "INT-PERSONALE",
+    "note": "Auto-tagged fra konto 3000 (AM-indkomst)",
+    "assigned_at": "2026-04-20 10:45"
+  },
+  "3921f0a7-89c4-4d8e-8bca-9ec76e124241": {
+    "code": "INT-PERSONALE",
+    "note": "Auto-tagged fra konto 3000 (AM-indkomst)",
+    "assigned_at": "2026-04-20 10:45"
+  },
+  "f99338b2-7f1b-494f-be98-62a1acb0dcbb": {
+    "code": "INT-PERSONALE",
+    "note": "Auto-tagged fra konto 3000 (AM-indkomst)",
+    "assigned_at": "2026-04-20 10:45"
+  },
+  "c9eda1ac-d2ba-4280-aea6-104b70ab9033": {
+    "code": "INT-PERSONALE",
+    "note": "Auto-tagged fra konto 3000 (AM-indkomst)",
+    "assigned_at": "2026-04-20 10:45"
+  },
+  "e2e9d8dd-8fd9-4dd0-992a-ad8b4cf1045b": {
+    "code": "INT-PERSONALE",
+    "note": "Auto-tagged fra konto 3000 (AM-indkomst)",
+    "assigned_at": "2026-04-20 10:45"
+  },
+  "58dac5c2-a606-48c1-bc3c-1b5f974a537f": {
+    "code": "INT-PERSONALE",
+    "note": "Auto-tagged fra konto 3000 (AM-indkomst)",
+    "assigned_at": "2026-04-20 10:45"
+  },
+  "6f24f72b-4718-4771-9b84-f62e75ccf7ed": {
+    "code": "INT-PERSONALE",
+    "note": "Auto-tagged fra konto 3000 (AM-indkomst)",
+    "assigned_at": "2026-04-20 10:45"
+  },
+  "d549c694-07d9-4c0a-925d-85365f615b8b": {
+    "code": "INT-PERSONALE",
+    "note": "Auto-tagged fra konto 3000 (AM-indkomst)",
+    "assigned_at": "2026-04-20 10:45"
+  },
+  "6b2a0b75-d72e-40bb-ad45-b5fede0b7c17": {
+    "code": "INT-PERSONALE",
+    "note": "Auto-tagged fra konto 3000 (AM-indkomst)",
+    "assigned_at": "2026-04-20 10:45"
+  },
+  "d4707ba9-a0f5-4efd-b30c-06eece370ab4": {
+    "code": "INT-PERSONALE",
+    "note": "Auto-tagged fra konto 3020 (Arbejdsgiver ATP)",
+    "assigned_at": "2026-04-20 10:45"
+  },
+  "8e2541e3-2435-40dd-bff1-93fc68cb319a": {
+    "code": "INT-PERSONALE",
+    "note": "Auto-tagged fra konto 3020 (Arbejdsgiver ATP)",
+    "assigned_at": "2026-04-20 10:45"
+  },
+  "64e9e247-57cb-4738-bca3-1b7173a0d782": {
+    "code": "INT-PERSONALE",
+    "note": "Auto-tagged fra konto 3020 (Arbejdsgiver ATP)",
+    "assigned_at": "2026-04-20 10:45"
+  },
+  "a0964d7f-01ce-4dd5-8488-f0ee53ef48fb": {
+    "code": "INT-PERSONALE",
+    "note": "Auto-tagged fra konto 3120 (Pension)",
+    "assigned_at": "2026-04-20 10:45"
+  },
+  "eb622fdb-10ac-46e8-a9e3-714660c60ba9": {
+    "code": "INT-PERSONALE",
+    "note": "Auto-tagged fra konto 3120 (Pension)",
+    "assigned_at": "2026-04-20 10:45"
+  },
+  "35c2f7e2-40ac-49b5-b046-d0215c52f1d4": {
+    "code": "INT-PERSONALE",
+    "note": "Auto-tagged fra konto 3120 (Pension)",
+    "assigned_at": "2026-04-20 10:45"
+  },
+  "85a226f4-21c5-4350-a828-55d369b6db98": {
+    "code": "INT-PERSONALE",
+    "note": "Auto-tagged fra konto 3160 (Kørsel i egen bil (kilometergodtgørelse))",
+    "assigned_at": "2026-04-20 10:45"
+  },
+  "453d97c2-b10b-4ecf-bcb1-7d04294c4374": {
+    "code": "INT-PERSONALE",
+    "note": "Auto-tagged fra konto 3160 (Kørsel i egen bil (kilometergodtgørelse))",
+    "assigned_at": "2026-04-20 10:45"
+  },
+  "bbc68801-aa06-4885-a3f8-baff8c43747e": {
+    "code": "INT-KONTOR",
+    "note": "Auto-tagged fra konto 5000 (Husleje)",
+    "assigned_at": "2026-04-20 10:45"
+  },
+  "67d11e0a-4b14-4550-9209-097f84fec9af": {
+    "code": "INT-KONTOR",
+    "note": "Auto-tagged fra konto 5025 (El)",
+    "assigned_at": "2026-04-20 10:45"
+  },
+  "d709ff2b-e10b-451d-b47a-94f3a6e08cec": {
+    "code": "INT-KONTOR",
+    "note": "Auto-tagged fra konto 5035 (Varme)",
+    "assigned_at": "2026-04-20 10:45"
   }
 }

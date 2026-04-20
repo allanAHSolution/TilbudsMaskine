@@ -131,23 +131,28 @@
     </div>
     {% endif %}
 
-    <!-- Sortér: PROJ først, så INT, til sidst UNTAGGED -->
+    <!-- Sortér: UNTAGGED øverst, så PROJ, INT, til sidst HISTORY -->
     {% set sorted_codes = [] %}
+    {% if 'UNTAGGED' in groups %}{% set _ = sorted_codes.append('UNTAGGED') %}{% endif %}
     {% for code in groups.keys()|sort %}
         {% if code.startswith('PROJ-') %}{% set _ = sorted_codes.append(code) %}{% endif %}
     {% endfor %}
     {% for code in groups.keys()|sort %}
-        {% if code.startswith('INT-') %}{% set _ = sorted_codes.append(code) %}{% endif %}
+        {% if code.startswith('INT-') and code != 'INT-HISTORY' %}{% set _ = sorted_codes.append(code) %}{% endif %}
     {% endfor %}
-    {% if 'UNTAGGED' in groups %}{% set _ = sorted_codes.append('UNTAGGED') %}{% endif %}
+    {% if 'INT-HISTORY' in groups %}{% set _ = sorted_codes.append('INT-HISTORY') %}{% endif %}
 
     {% for code in sorted_codes %}
     {% set items = groups[code] %}
     {% set gruppe_sum = namespace(total=0) %}
     {% for e in items %}{% set gruppe_sum.total = gruppe_sum.total + e.amount %}{% endfor %}
+    {% set start_open = (code == 'UNTAGGED') %}
+    {% set gid = 'grp-' ~ loop.index %}
 
-    <div class="card p-0 mb-4">
-        <div class="gruppe-header {{ 'untagged' if code == 'UNTAGGED' else ('history' if code == 'INT-HISTORY' else ('intern' if code.startswith('INT-') else '')) }}">
+    <div class="card p-0 mb-3">
+        <div class="gruppe-header {{ 'untagged' if code == 'UNTAGGED' else ('history' if code == 'INT-HISTORY' else ('intern' if code.startswith('INT-') else '')) }}"
+             role="button" data-bs-toggle="collapse" data-bs-target="#{{ gid }}"
+             aria-expanded="{{ 'true' if start_open else 'false' }}" style="cursor:pointer;">
             <div>
                 <span class="kode-badge">{{ code }}</span>
                 {% if code.startswith('PROJ-') and code in projekt_map %}
@@ -157,10 +162,11 @@
                     <span class="ms-2 fw-bold">Ingen kode angivet</span>
                 {% elif code.startswith('INT-') %}
                     <span class="ms-2 fw-bold">
-                        {% if code == 'INT-ADMIN' %}Administration (revisor, forsikring)
+                        {% if code == 'INT-ADMIN' %}Administration (revisor, forsikring, kursdiff.)
                         {% elif code == 'INT-DRIFT' %}Drift (software, hosting, abonnementer)
-                        {% elif code == 'INT-KONTOR' %}Kontor (artikler, husleje, strøm)
+                        {% elif code == 'INT-KONTOR' %}Kontor (husleje, el, varme, rengøring)
                         {% elif code == 'INT-SALG' %}Salgsomkostninger (rejser, hotel, flybilletter)
+                        {% elif code == 'INT-PERSONALE' %}Personale (løn, ATP, pension, kørselsgodtgørelse)
                         {% elif code == 'INT-MARKETING' %}Marketing (reklame, hjemmeside, SoMe)
                         {% elif code == 'INT-HISTORY' %}Historik (utagget fra før systemet)
                         {% else %}Ukendt intern kode{% endif %}
@@ -169,12 +175,16 @@
                     <span class="ms-2 fw-bold">{{ code }}</span>
                 {% endif %}
             </div>
-            <div class="text-end">
-                <div style="font-size:0.7rem; opacity:0.8;">{{ items|length }} poster</div>
-                <div style="font-size:1.15rem; font-weight:800;">{{ "{:,.0f}".format(gruppe_sum.total) }} kr</div>
+            <div class="d-flex align-items-center gap-3">
+                <div class="text-end">
+                    <div style="font-size:0.7rem; opacity:0.8;">{{ items|length }} poster</div>
+                    <div style="font-size:1.15rem; font-weight:800;">{{ "{:,.0f}".format(gruppe_sum.total) }} kr</div>
+                </div>
+                <i class="fa fa-chevron-down" style="opacity:0.7; transition:transform 0.2s;"></i>
             </div>
         </div>
 
+        <div id="{{ gid }}" class="collapse {{ 'show' if start_open }}">
         <div style="padding: 8px 0;">
             <div class="entry-row" style="background:#f8fafc; font-weight:700; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.8px; color:var(--text-muted);">
                 <div>Dato</div>
@@ -213,6 +223,7 @@
                                 <option value="INT-DRIFT"     {{ 'selected' if code == 'INT-DRIFT' }}>INT-DRIFT (drift)</option>
                                 <option value="INT-KONTOR"    {{ 'selected' if code == 'INT-KONTOR' }}>INT-KONTOR (kontor)</option>
                                 <option value="INT-SALG"      {{ 'selected' if code == 'INT-SALG' }}>INT-SALG (salg/rejser)</option>
+                                <option value="INT-PERSONALE" {{ 'selected' if code == 'INT-PERSONALE' }}>INT-PERSONALE (løn)</option>
                                 <option value="INT-MARKETING" {{ 'selected' if code == 'INT-MARKETING' }}>INT-MARKETING</option>
                                 <option value="INT-HISTORY"   {{ 'selected' if code == 'INT-HISTORY' }}>INT-HISTORY (arkiv/historik)</option>
                             </optgroup>
@@ -230,6 +241,7 @@
             </div>
             {% endif %}
         </div>
+        </div>
     </div>
     {% endfor %}
 
@@ -243,5 +255,18 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Rotér chevron når gruppe kollapses/åbnes
+    document.querySelectorAll('.gruppe-header').forEach(h => {
+        const chev = h.querySelector('.fa-chevron-down');
+        if (!chev) return;
+        const target = document.querySelector(h.getAttribute('data-bs-target'));
+        if (!target) return;
+        // Initial state
+        if (target.classList.contains('show')) chev.style.transform = 'rotate(180deg)';
+        target.addEventListener('show.bs.collapse', () => chev.style.transform = 'rotate(180deg)');
+        target.addEventListener('hide.bs.collapse', () => chev.style.transform = 'rotate(0deg)');
+    });
+</script>
 </body>
 </html>

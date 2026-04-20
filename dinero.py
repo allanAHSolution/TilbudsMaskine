@@ -328,16 +328,23 @@ def fetch_purchase_entries(from_date: str, to_date: str) -> list[dict]:
 
     raw = res.json()
     entries = []
+
+    def er_udgiftskonto(acct):
+        """True hvis kontoen er en reel driftsudgift.
+        Udelukker: bank (55xxx), kreditorer/moms (6xxxx), egenkapital (8xxxx)."""
+        return (2000 <= acct < 5500) or (7000 <= acct < 8000)
+
     for e in raw:
         vtype = e.get("VoucherType") or ""
         amount = e.get("Amount", 0)
         acct = e.get("AccountNumber", 0)
         desc = e.get("Description") or ""
-        # Kun udgifter: Purchases, eller manuelle poster på konto 2000-2999
-        if vtype == "Purchases" and amount > 0:
+        if vtype == "Purchases" and amount > 0 and er_udgiftskonto(acct):
             pass  # inkluder
-        elif vtype == "manuel" and 2000 <= acct < 3000 and amount > 0:
-            pass  # inkluder (f.eks. kursdifferencer)
+        elif vtype == "manuel" and 2000 <= acct < 5500 and amount > 0:
+            pass  # inkluder manuel (kursdifference, løn)
+        elif vtype == "manuel" and 7000 <= acct < 8000 and amount > 0:
+            pass  # inkluder manuel driftsudgift
         else:
             continue
 

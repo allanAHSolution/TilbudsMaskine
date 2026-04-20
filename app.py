@@ -418,6 +418,7 @@ def dinero_sync():
                     linjer = [{"beskrivelse": beskrivelse, "antal": 1, "enhedspris": float(f.get('beloeb', 0))}]
                     site_str = f" · {t.get('site').strip()}" if t.get('site') else ''
                     titel    = f"#{t.get('nummer')} {t.get('kunde','')}{site_str} — {beskrivelse}"
+                    komment  = f"{titel}\n\nJf. vores ordrebekræftelse nr. {t.get('nummer')}"
                     new_guid, ts = dinero_api.opret_faktura(
                         kunde_navn=t.get('kunde', ''),
                         linjer=linjer,
@@ -425,7 +426,7 @@ def dinero_sync():
                         valuta=t.get('valuta', 'DKK'),
                         moms=t.get('moms', 'ja'),
                         beskrivelse=titel,
-                        kommentar=titel,
+                        kommentar=komment,
                     )
                     f['dinero_guid']      = new_guid
                     f['dinero_timestamp'] = ts
@@ -532,6 +533,54 @@ def dinero_bilag_tag():
         }
     save_data(DINERO_TAGS_FILE, tags)
     return redirect(url_for('dinero_omkostninger'))
+
+
+@app.route('/dinero/kladder/reset')
+def dinero_reset_kladder():
+    """
+    Sletter alle Dinero-kladder (ikke-bogførte) for alle fakturaer i ERP
+    og rydder lokale dinero_guid-felter så de pushes på ny ved næste sync.
+    Bogførte fakturaer røres IKKE.
+    """
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    if not DINERO_OK:
+        return redirect(url_for('admin_panel'))
+
+    all_data = load_data(TILBUD_FILE, {})
+    slettet = 0
+    bevaret = 0
+    fejl    = 0
+    for t in all_data.values():
+        for f in t.get('fakturaer', []):
+            guid = f.get('dinero_guid')
+            if not guid:
+                continue
+            try:
+                info   = dinero_api.hent_faktura_status(guid)
+                status = info.get('PaymentStatus') or info.get('Status') or ''
+                if status in ('Draft', 'Kladde', 'draft'):
+                    ts = info.get('TimeStamp') or f.get('dinero_timestamp')
+                    dinero_api.slet_faktura(guid, ts)
+                    # Ryd lokalt så den retrys næste sync
+                    f.pop('dinero_guid', None)
+                    f.pop('dinero_timestamp', None)
+                    f.pop('dinero_status', None)
+                    f.pop('dinero_fejl', None)
+                    slettet += 1
+                else:
+                    bevaret += 1
+            except Exception as e:
+                f['dinero_fejl'] = f"Reset fejlede: {str(e)[:180]}"
+                fejl += 1
+
+    save_data(TILBUD_FILE, all_data)
+    return (
+        f"✓ Slettet {slettet} kladder i Dinero. "
+        f"Bevaret {bevaret} bogførte. Fejl: {fejl}. "
+        f"<br><a href='/dinero/sync'>Klik her for at re-pushe dem nu</a> "
+        f"<br><a href='/admin'>Eller tilbage til admin</a>"
+    )
 
 
 @app.route('/dinero/test')
@@ -1221,6 +1270,7 @@ def faktura_tilfoej(tilbud_id):
             }]
             site_str = f" · {t.get('site').strip()}" if t.get('site') else ''
             titel    = f"#{t.get('nummer')} {t.get('kunde','')}{site_str} — {beskrivelse}"
+            komment  = f"{titel}\n\nJf. vores ordrebekræftelse nr. {t.get('nummer')}"
             guid, ts = dinero_api.opret_faktura(
                 kunde_navn=t.get('kunde', ''),
                 linjer=linjer,
@@ -1228,7 +1278,7 @@ def faktura_tilfoej(tilbud_id):
                 valuta=t.get('valuta', 'DKK'),
                 moms=t.get('moms', 'ja'),
                 beskrivelse=titel,
-                kommentar=titel,
+                kommentar=komment,
             )
             faktura["dinero_guid"]      = guid
             faktura["dinero_timestamp"] = ts

@@ -175,6 +175,20 @@ def find_eller_opret_kontakt(navn, email=""):
 
 
 # ────────── FAKTURAER ──────────
+def slet_faktura(guid, timestamp):
+    """Sletter en kladde-faktura i Dinero. Bogførte fakturaer kan ikke slettes."""
+    oid = _org_id()
+    res = requests.delete(
+        f"{API_BASE}/{oid}/invoices/{guid}",
+        headers=_headers(),
+        data=json.dumps({"Timestamp": timestamp}),
+        timeout=20,
+    )
+    if not res.ok:
+        raise RuntimeError(f"Kunne ikke slette faktura ({res.status_code}): {res.text[:300]}")
+    return True
+
+
 def opret_faktura(kunde_navn, linjer, dato=None, valuta="DKK",
                   kommentar="", beskrivelse=None, kontakt_email="",
                   moms="ja"):

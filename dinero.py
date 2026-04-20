@@ -208,7 +208,7 @@ def opret_faktura(kunde_navn, linjer, dato=None, valuta="DKK",
         "ContactGuid":      contact_id,
         "ShowLinesInclVat": False,
         "ProductLines":     product_lines,
-        "PaymentConditionType":            "NetDays",
+        "PaymentConditionType":            "Netto",
         "PaymentConditionNumberOfDays":    14,
     }
 

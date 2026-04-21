@@ -375,27 +375,30 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- Grøn bar: faktureret af budget -->
+                        <!-- Kun grøn bar (faktureret af budget) på kunde-header; rød er pr. projekt nedenfor -->
                         {% if grp.total > 0 %}
                         <div class="progress" style="height: 3px; border-radius: 0;">
                             <div class="progress-bar faktura-bar" data-w="{{ pct }}" style="background: #16a34a;"></div>
                         </div>
                         {% endif %}
-                        <!-- Rød bar: udgift af faktureret -->
-                        {% if grp.udgifter > 0 %}
-                        <div class="progress" style="height: 3px; border-radius: 0;">
-                            <div class="progress-bar faktura-bar" data-w="{{ [udg_pct, 100]|min }}" style="background: #dc2626;"></div>
-                        </div>
-                        {% endif %}
 
                         <div id="{{ gid }}" class="collapse" style="padding: 8px;">
                         {% for id, t in grp.projekter %}
+                    {% set proj_kode = 'PROJ-' ~ '{:03d}'.format(t.nummer or 0) %}
                     {% set total = namespace(val=0) %}
                     {% for p in t.produkter %}{% set total.val = total.val + (p.antal|float * p.pris|float) %}{% endfor %}
                     {% set fakturaer = t.get('fakturaer', []) %}
                     {% set fakt = namespace(total=0) %}
                     {% for f in fakturaer %}{% set fakt.total = fakt.total + f.beloeb|float %}{% endfor %}
+                    {# Dinero-synced totaler er i DKK; læg til som kombineret visning #}
+                    {% set dinero_salg_dkk = dinero_salg_per_proj.get(proj_kode, 0) %}
+                    {% set dinero_omk_dkk  = dinero_omk_per_proj.get(proj_kode, 0) %}
+                    {% set manuel_omk = namespace(val=0) %}
+                    {% for o in t.get('projekt',{}).get('omkostninger', []) %}{% set manuel_omk.val = manuel_omk.val + o.beloeb|float %}{% endfor %}
+                    {% set samlet_fakt_display = fakt.total + dinero_salg_dkk %}
+                    {% set samlet_udg_display  = manuel_omk.val + dinero_omk_dkk %}
                     {% if total.val > 0 %}{% set fakt_pct = [100, (fakt.total / total.val * 100)|round|int]|min %}{% else %}{% set fakt_pct = 0 %}{% endif %}
+                    {% set udg_pct = (samlet_udg_display / samlet_fakt_display * 100)|round|int if samlet_fakt_display > 0 else 0 %}
                     <div class="tilbud-item solgt">
                         <div class="d-flex justify-content-between align-items-start gap-2">
                             <div style="min-width:0;">
@@ -414,7 +417,13 @@
                         </div>
                         <div class="mt-2 pt-2" style="border-top: 1px solid #d1fae5;">
                             <div class="d-flex justify-content-between align-items-center" style="font-size:0.72rem; color: var(--text-muted);">
-                                <span>Faktureret: <strong>{{ "{:,.0f}".format(fakt.total) }} {{ t.valuta }}</strong> af {{ "{:,.0f}".format(total.val) }}</span>
+                                <span>
+                                    Faktureret: <strong style="color:#16a34a;">{{ "{:,.0f}".format(samlet_fakt_display) }} {{ 'DKK' if dinero_salg_dkk > 0 else t.valuta }}</strong>
+                                    {% if total.val > 0 %} af {{ "{:,.0f}".format(total.val) }} {{ t.valuta }}{% endif %}
+                                    {% if samlet_udg_display > 0 %}
+                                    · <span style="color:#dc2626;">Udgift: <strong>{{ "{:,.0f}".format(samlet_udg_display) }} DKK</strong></span>
+                                    {% endif %}
+                                </span>
                                 <div class="d-flex gap-2">
                                     <button type="button" class="btn btn-xs btn-link p-0 text-decoration-none"
                                             style="font-size:0.7rem; color: var(--accent);"
@@ -426,9 +435,16 @@
                                     {% endif %}
                                 </div>
                             </div>
+                            {# Grøn bar: faktureret af budget #}
                             <div class="progress mt-1" style="height: 5px; border-radius: 3px;">
                                 <div class="progress-bar faktura-bar" data-w="{{ fakt_pct }}" style="background: #16a34a;"></div>
                             </div>
+                            {# Rød bar: udgift af faktureret #}
+                            {% if samlet_udg_display > 0 %}
+                            <div class="progress mt-1" style="height: 4px; border-radius: 3px;">
+                                <div class="progress-bar faktura-bar" data-w="{{ [udg_pct, 100]|min }}" style="background: #dc2626;"></div>
+                            </div>
+                            {% endif %}
                             <div class="collapse" id="fakt-form-{{ id }}">
                                 <form action="/faktura/tilfoej/{{ id }}" method="POST" class="mt-2">
                                     <div class="row g-1">

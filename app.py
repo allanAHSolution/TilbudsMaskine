@@ -777,6 +777,8 @@ def admin_panel():
                            afventer=afventer,
                            vundne=vundne,
                            vundne_grupper=vundne_grupper,
+                           dinero_salg_per_proj=dinero_salg_per_proj,
+                           dinero_omk_per_proj=dinero_omk_per_proj,
                            tabte=tabte,
                            arkiverede=arkiverede,
                            statistik_opdelt=statistik_opdelt,

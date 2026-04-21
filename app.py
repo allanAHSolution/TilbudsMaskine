@@ -707,28 +707,63 @@ def admin_panel():
     )
     faktureringsopgaver = _beregn_faktureringsopgaver(idag)
 
+    # --- Hent Dinero-syncede salg/køb én gang (bruges nedenfor) ---
+    dinero_salg_per_proj = {}  # PROJ-XXX → sum
+    dinero_omk_per_proj  = {}  # PROJ-XXX → sum
+    if DINERO_OK:
+        try:
+            pmap = _projekt_map(all_data)
+            tags = load_data(DINERO_TAGS_FILE, {})
+            # Salgsfakturaer (direkte i Dinero)
+            kendte_guids = set()
+            for t in vundne.values():
+                for f in t.get('fakturaer', []):
+                    if f.get('dinero_guid'):
+                        kendte_guids.add(f['dinero_guid'])
+            invs = dinero_api.fetch_invoices(from_date=f'{aar}-01-01')
+            for i in invs:
+                if i['guid'] in kendte_guids:
+                    continue
+                kode = i.get('project_code') or _match_paa_navn(i.get('description', ''), pmap)
+                if kode and kode.startswith('PROJ-'):
+                    dinero_salg_per_proj[kode] = dinero_salg_per_proj.get(kode, 0) + float(i.get('total_incl_vat', 0))
+            # Købsbilag (omkostninger)
+            entries = dinero_api.fetch_purchase_entries(f'{aar}-01-01', idag.strftime('%Y-%m-%d'))
+            entries = _anvend_lokale_tags(entries, tags, pmap)
+            for e in entries:
+                kode = e.get('project_code')
+                if kode and kode.startswith('PROJ-'):
+                    dinero_omk_per_proj[kode] = dinero_omk_per_proj.get(kode, 0) + e['amount']
+        except Exception:
+            pass
+
     # Gruppér vundne projekter efter kunde (normaliser: strip + case-insensitive)
     vundne_per_kunde = {}
     for tid, t in vundne.items():
         raw   = (t.get('kunde') or '—').strip() or '—'
-        nkey  = raw.lower()  # nøgle til gruppering
+        nkey  = raw.lower()
         if nkey not in vundne_per_kunde:
             vundne_per_kunde[nkey] = {'display': raw, 'items': []}
         vundne_per_kunde[nkey]['items'].append((tid, t))
-    # Sortér kunder alfabetisk, projekter indenfor hver kunde efter nummer desc
     vundne_grupper = []
     for nkey in sorted(vundne_per_kunde.keys()):
         projekter = sorted(vundne_per_kunde[nkey]['items'], key=lambda x: -(x[1].get('nummer') or 0))
         grp_total = 0
         grp_fakt  = 0
+        grp_udg   = 0
         for _, t in projekter:
+            proj_code = f"PROJ-{t.get('nummer', 0):03d}"
             grp_total += sum(float(p.get('antal',1))*float(p.get('pris',0)) for p in t.get('produkter',[]))
             grp_fakt  += sum(float(f.get('beloeb',0)) for f in t.get('fakturaer',[]))
+            grp_fakt  += dinero_salg_per_proj.get(proj_code, 0)
+            grp_udg   += sum(float(o.get('beloeb',0)) for o in t.get('projekt',{}).get('omkostninger',[]))
+            grp_udg   += dinero_omk_per_proj.get(proj_code, 0)
         vundne_grupper.append({
             'kunde':     vundne_per_kunde[nkey]['display'],
             'projekter': projekter,
             'total':     grp_total,
             'faktureret': grp_fakt,
+            'udgifter':  grp_udg,
             'antal':     len(projekter),
             'valuta':    projekter[0][1].get('valuta', 'DKK') if projekter else 'DKK',
         })

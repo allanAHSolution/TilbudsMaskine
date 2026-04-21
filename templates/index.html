@@ -347,6 +347,8 @@
                     {% for grp in vundne_grupper %}
                     {% set gid = 'kunde-' ~ loop.index %}
                     {% set pct = (grp.faktureret / grp.total * 100)|round|int if grp.total > 0 else 0 %}
+                    {% set udg_pct = (grp.udgifter / grp.faktureret * 100)|round|int if grp.faktureret > 0 else 0 %}
+                    {% set margin = grp.faktureret - grp.udgifter %}
                     <div class="mb-2" style="border:1px solid var(--border); border-radius:8px; overflow:hidden;">
                         <div class="d-flex justify-content-between align-items-center p-2"
                              role="button" data-bs-toggle="collapse" data-bs-target="#{{ gid }}"
@@ -358,16 +360,33 @@
                                 </div>
                                 <div class="small" style="color: var(--text-muted); font-size:0.7rem;">
                                     {{ grp.antal }} projekt{{ 'er' if grp.antal != 1 }} ·
-                                    {{ "{:,.0f}".format(grp.faktureret) }} / {{ "{:,.0f}".format(grp.total) }} {{ grp.valuta }} faktureret
+                                    <span style="color:#16a34a;">{{ "{:,.0f}".format(grp.faktureret) }} faktureret</span>
+                                    {% if grp.udgifter > 0 %} · <span style="color:#dc2626;">{{ "{:,.0f}".format(grp.udgifter) }} udgift</span>{% endif %}
+                                    {% if grp.total > 0 %} · budget {{ "{:,.0f}".format(grp.total) }}{% endif %}
+                                    {{ grp.valuta }}
                                 </div>
                             </div>
                             <div class="text-end flex-shrink-0">
+                                {% if grp.total > 0 %}
                                 <div class="fw-bold" style="color:#16a34a; font-size:0.9rem;">{{ pct }}%</div>
+                                {% endif %}
+                                <div class="small fw-bold {% if margin >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-size:0.7rem;">
+                                    margin {{ "{:,.0f}".format(margin) }}
+                                </div>
                             </div>
                         </div>
+                        <!-- Grøn bar: faktureret af budget -->
+                        {% if grp.total > 0 %}
                         <div class="progress" style="height: 3px; border-radius: 0;">
                             <div class="progress-bar faktura-bar" data-w="{{ pct }}" style="background: #16a34a;"></div>
                         </div>
+                        {% endif %}
+                        <!-- Rød bar: udgift af faktureret -->
+                        {% if grp.udgifter > 0 %}
+                        <div class="progress" style="height: 3px; border-radius: 0;">
+                            <div class="progress-bar faktura-bar" data-w="{{ [udg_pct, 100]|min }}" style="background: #dc2626;"></div>
+                        </div>
+                        {% endif %}
 
                         <div id="{{ gid }}" class="collapse" style="padding: 8px;">
                         {% for id, t in grp.projekter %}

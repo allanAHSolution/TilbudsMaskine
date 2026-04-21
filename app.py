@@ -726,7 +726,8 @@ def admin_panel():
                     continue
                 kode = i.get('project_code') or _match_paa_navn(i.get('description', ''), pmap)
                 if kode and kode.startswith('PROJ-'):
-                    dinero_salg_per_proj[kode] = dinero_salg_per_proj.get(kode, 0) + float(i.get('total_incl_vat', 0))
+                    beloeb_dkk = til_dkk(float(i.get('total_incl_vat', 0)), i.get('currency', 'DKK'), kurser)
+                    dinero_salg_per_proj[kode] = dinero_salg_per_proj.get(kode, 0) + beloeb_dkk
             # Købsbilag (omkostninger)
             entries = dinero_api.fetch_purchase_entries(f'{aar}-01-01', idag.strftime('%Y-%m-%d'))
             entries = _anvend_lokale_tags(entries, tags, pmap)
@@ -748,16 +749,19 @@ def admin_panel():
     vundne_grupper = []
     for nkey in sorted(vundne_per_kunde.keys()):
         projekter = sorted(vundne_per_kunde[nkey]['items'], key=lambda x: -(x[1].get('nummer') or 0))
-        grp_total = 0
-        grp_fakt  = 0
-        grp_udg   = 0
+        grp_total = 0  # budget i DKK
+        grp_fakt  = 0  # faktureret i DKK
+        grp_udg   = 0  # udgifter i DKK
         for _, t in projekter:
             proj_code = f"PROJ-{t.get('nummer', 0):03d}"
-            grp_total += sum(float(p.get('antal',1))*float(p.get('pris',0)) for p in t.get('produkter',[]))
-            grp_fakt  += sum(float(f.get('beloeb',0)) for f in t.get('fakturaer',[]))
-            grp_fakt  += dinero_salg_per_proj.get(proj_code, 0)
-            grp_udg   += sum(float(o.get('beloeb',0)) for o in t.get('projekt',{}).get('omkostninger',[]))
-            grp_udg   += dinero_omk_per_proj.get(proj_code, 0)
+            pval      = t.get('valuta', 'DKK')
+            # Budget + lokale fakturaer er i projekt-valuta → konverter til DKK
+            grp_total += til_dkk(sum(float(p.get('antal',1))*float(p.get('pris',0)) for p in t.get('produkter',[])), pval, kurser)
+            grp_fakt  += til_dkk(sum(float(f.get('beloeb',0)) for f in t.get('fakturaer',[])), pval, kurser)
+            grp_udg   += til_dkk(sum(float(o.get('beloeb',0)) for o in t.get('projekt',{}).get('omkostninger',[])), pval, kurser)
+            # Dinero-salg og -køb er allerede i DKK (eller egen valuta for salg)
+            grp_fakt  += dinero_salg_per_proj.get(proj_code, 0)  # antaget DKK (TODO: konverter salg-valuta)
+            grp_udg   += dinero_omk_per_proj.get(proj_code, 0)   # DKK
         vundne_grupper.append({
             'kunde':     vundne_per_kunde[nkey]['display'],
             'projekter': projekter,
@@ -765,7 +769,7 @@ def admin_panel():
             'faktureret': grp_fakt,
             'udgifter':  grp_udg,
             'antal':     len(projekter),
-            'valuta':    projekter[0][1].get('valuta', 'DKK') if projekter else 'DKK',
+            'valuta':    'DKK',
         })
 
     return render_template('index.html',
@@ -1012,10 +1016,18 @@ def projekt_side(tilbud_id):
         t['projekt'] = {"oprettet": datetime.now().strftime('%d-%m-%Y'), "omkostninger": [], "noter": ""}
         save_data(TILBUD_FILE, all_data)
 
+    # Valutakurser til konvertering (alt samles i DKK for korrekt margin)
+    indstillinger = load_data(INDSTILLINGER_FILE, {"kurser": {"NOK": 0.63, "EUR": 7.46, "SEK": 0.67}})
+    kurser        = indstillinger.get("kurser", {"NOK": 0.63, "EUR": 7.46, "SEK": 0.67})
+    proj_valuta   = t.get('valuta', 'DKK')
+
     budget         = _projekt_budget(t)
+    budget_dkk     = til_dkk(budget, proj_valuta, kurser)
     faktureret     = sum(float(f.get('beloeb', 0)) for f in t.get('fakturaer', []))
+    faktureret_dkk = til_dkk(faktureret, proj_valuta, kurser)
     omkostninger   = t['projekt'].get('omkostninger', [])
     total_manuel   = sum(float(o.get('beloeb', 0)) for o in omkostninger)
+    total_manuel_dkk = til_dkk(total_manuel, proj_valuta, kurser)
 
     # Hent Dinero-syncede omkostninger + salgsfakturaer tagget til projektet
     dinero_omk   = []
@@ -1049,25 +1061,33 @@ def projekt_side(tilbud_id):
         except Exception:
             pass
 
-    total_dinero        = sum(e['amount'] for e in dinero_omk)
-    total_omk           = total_manuel + total_dinero
-    total_salg_dinero   = sum(float(i.get('total_incl_vat', 0)) for i in dinero_salg)
-    faktureret_total    = faktureret + total_salg_dinero
-    margin              = faktureret_total - total_omk
+    # Dinero-tal er altid i DKK (købsbilag) eller egen valuta (salgsfakturaer)
+    total_dinero_dkk      = sum(e['amount'] for e in dinero_omk)  # Dinero entries = DKK
+    total_salg_dinero_dkk = sum(til_dkk(float(i.get('total_incl_vat', 0)),
+                                         i.get('currency', 'DKK'), kurser)
+                                 for i in dinero_salg)
+
+    # Alle summer normaliseret til DKK for korrekt margin-beregning
+    total_omk_dkk        = total_manuel_dkk + total_dinero_dkk
+    faktureret_total_dkk = faktureret_dkk + total_salg_dinero_dkk
+    margin_dkk           = faktureret_total_dkk - total_omk_dkk
 
     return render_template('projekt.html',
                            t=t, id=tilbud_id,
-                           budget=budget,
-                           faktureret=faktureret,
-                           faktureret_total=faktureret_total,
-                           total_omk=total_omk,
-                           total_manuel=total_manuel,
-                           total_dinero=total_dinero,
-                           total_salg_dinero=total_salg_dinero,
+                           budget=budget,                  # i projekt-valuta
+                           budget_dkk=budget_dkk,
+                           faktureret=faktureret,          # lokale fakturaer i proj-valuta
+                           faktureret_total_dkk=faktureret_total_dkk,
+                           total_omk_dkk=total_omk_dkk,
+                           total_manuel=total_manuel,      # i proj-valuta
+                           total_manuel_dkk=total_manuel_dkk,
+                           total_dinero_dkk=total_dinero_dkk,
+                           total_salg_dinero_dkk=total_salg_dinero_dkk,
                            dinero_omk=dinero_omk,
                            dinero_salg=dinero_salg,
                            proj_code=proj_code,
-                           margin=margin,
+                           margin_dkk=margin_dkk,
+                           proj_valuta=proj_valuta,
                            now_date=datetime.now().strftime('%Y-%m-%d'))
 
 

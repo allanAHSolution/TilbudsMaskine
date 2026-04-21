@@ -364,6 +364,7 @@ def fetch_purchase_entries(from_date: str, to_date: str) -> list[dict]:
             "account_name":   e.get("AccountName", ""),
             "description":    desc,
             "amount":         amount,
+            "currency":       "DKK",  # Dinero bogfører altid i base-valuta (DKK)
             "entry_guid":     e.get("EntryGuid"),
             "contact_guid":   e.get("ContactGuid"),
             "project_code":   parse_project_code(desc),

@@ -112,22 +112,23 @@
         </div>
 
         <!-- ── KPI-kort ── -->
-        {% set margin_pct = ((margin / faktureret_total * 100)|round(0)|int) if faktureret_total > 0 else 0 %}
-        {% set budget_pct = ((faktureret_total / budget * 100)|round(0)|int) if budget > 0 else 0 %}
+        {% set margin_pct = ((margin_dkk / faktureret_total_dkk * 100)|round(0)|int) if faktureret_total_dkk > 0 else 0 %}
+        {% set budget_pct = ((faktureret_total_dkk / budget_dkk * 100)|round(0)|int) if budget_dkk > 0 else 0 %}
         <div class="row g-3 mb-4">
             <div class="col-6 col-md-3">
                 <div class="kpi-kort" style="background: var(--accent-lt); color: var(--accent);">
                     <div class="kpi-label">Budget (tilbud)</div>
                     <div class="kpi-value">{{ "{:,.0f}".format(budget) }}</div>
-                    <div class="kpi-sub">{{ t.valuta }}</div>
+                    <div class="kpi-sub">{{ proj_valuta }}{% if proj_valuta != 'DKK' and budget > 0 %} · {{ "{:,.0f}".format(budget_dkk) }} DKK{% endif %}</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
                 <div class="kpi-kort" style="background: var(--green-lt); color: var(--green);">
                     <div class="kpi-label">Faktureret</div>
-                    <div class="kpi-value">{{ "{:,.0f}".format(faktureret_total) }}</div>
+                    <div class="kpi-value">{{ "{:,.0f}".format(faktureret_total_dkk) }}</div>
                     <div class="kpi-sub">
-                        {% if budget > 0 %}{{ ((faktureret_total / budget * 100)|round|int) }}% af budget
+                        DKK ·
+                        {% if budget_dkk > 0 %}{{ budget_pct }}% af budget
                         {% elif dinero_salg %}inkl. {{ dinero_salg|length }} fra Dinero
                         {% else %}ingen budget{% endif %}
                     </div>
@@ -136,8 +137,9 @@
             <div class="col-6 col-md-3">
                 <div class="kpi-kort" style="background: #fffbeb; color: #b45309;">
                     <div class="kpi-label">Omkostninger</div>
-                    <div class="kpi-value">{{ "{:,.0f}".format(total_omk) }}</div>
+                    <div class="kpi-value">{{ "{:,.0f}".format(total_omk_dkk) }}</div>
                     <div class="kpi-sub">
+                        DKK ·
                         {% if dinero_omk %}{{ dinero_omk|length }} Dinero{% endif %}
                         {% if dinero_omk and t.projekt.omkostninger %} + {% endif %}
                         {% if t.projekt.omkostninger %}{{ t.projekt.omkostninger|length }} manuelle{% endif %}
@@ -146,22 +148,22 @@
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="kpi-kort" style="background: {{ '#ecfdf5' if margin >= 0 else '#fef2f2' }}; color: {{ '#059669' if margin >= 0 else '#dc2626' }};">
+                <div class="kpi-kort" style="background: {{ '#ecfdf5' if margin_dkk >= 0 else '#fef2f2' }}; color: {{ '#059669' if margin_dkk >= 0 else '#dc2626' }};">
                     <div class="kpi-label">Margin</div>
-                    <div class="kpi-value">{{ "{:,.0f}".format(margin) }}</div>
-                    <div class="kpi-sub">{{ margin_pct }}%</div>
+                    <div class="kpi-value">{{ "{:,.0f}".format(margin_dkk) }}</div>
+                    <div class="kpi-sub">DKK · {{ margin_pct }}%</div>
                 </div>
             </div>
         </div>
 
         <!-- Margin-bar -->
-        {% if faktureret > 0 %}
+        {% if faktureret_total_dkk > 0 %}
         <div class="card p-3 mb-4">
             <div class="d-flex justify-content-between" style="font-size:0.72rem; color:var(--text-muted);">
                 <span>Omkostninger vs. Faktureret</span>
-                <span>{{ "{:,.0f}".format(total_omk) }} / {{ "{:,.0f}".format(faktureret) }} {{ t.valuta }}</span>
+                <span>{{ "{:,.0f}".format(total_omk_dkk) }} / {{ "{:,.0f}".format(faktureret_total_dkk) }} DKK</span>
             </div>
-            {% set omk_pct = (total_omk / faktureret * 100) if faktureret > 0 else 0 %}
+            {% set omk_pct = (total_omk_dkk / faktureret_total_dkk * 100) if faktureret_total_dkk > 0 else 0 %}
             <div class="margin-bar">
                 <div class="margin-bar-fill" style="width:{{ [omk_pct, 100]|min }}%; background: {{ '#f59e0b' if omk_pct < 70 else ('#f97316' if omk_pct < 90 else '#dc2626') }};"></div>
             </div>
@@ -277,13 +279,13 @@
                         </form>
                     </div>
 
-                    <!-- Dinero-syncede omkostninger -->
+                    <!-- Dinero-syncede omkostninger (altid i DKK fra bogføringen) -->
                     {% if dinero_omk %}
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <div class="section-label mb-0">
                             <i class="fa fa-sync me-1"></i> Fra Dinero · {{ proj_code }}
                         </div>
-                        <span class="small fw-bold" style="color:#b45309;">{{ "{:,.0f}".format(total_dinero) }} {{ t.valuta }}</span>
+                        <span class="small fw-bold" style="color:#b45309;">{{ "{:,.0f}".format(total_dinero_dkk) }} DKK</span>
                     </div>
                     {% for e in dinero_omk %}
                     <div class="omk-item" style="border-left-color:#0ea5e9; background:#f0f9ff;">
@@ -295,7 +297,7 @@
                                 </div>
                             </div>
                             <span class="fw-bold" style="font-size:0.85rem; white-space:nowrap; color:#b45309;">
-                                {{ "{:,.0f}".format(e.amount) }} {{ t.valuta }}
+                                {{ "{:,.0f}".format(e.amount) }} DKK
                             </span>
                         </div>
                     </div>

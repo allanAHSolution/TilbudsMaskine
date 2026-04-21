@@ -451,11 +451,12 @@ def dinero_sync():
     return redirect(url_for('dinero_omkostninger'))
 
 
-def _anvend_lokale_tags(entries, tags):
+def _anvend_lokale_tags(entries, tags, projekt_map=None):
     """
-    Lægger lokale ERP-tags oven på entries. Lokal tag vinder over tekst-kode.
-    Returnerer entries med opdateret 'project_code' og 'source'-felt
-    ('local' eller 'dinero' eller None).
+    Lægger lokale ERP-tags oven på entries. Prioritet:
+      1. Lokal tag (dinero_bilag_tags.json)
+      2. Kode i tekst (PROJ-XXX / INT-XXX)
+      3. Fallback: match på site/kunde-navn fra vundne projekter
     """
     for e in entries:
         guid = e.get('entry_guid')
@@ -465,6 +466,13 @@ def _anvend_lokale_tags(entries, tags):
             e['tag_note']     = tags[guid].get('note', '')
         elif e.get('project_code'):
             e['tag_source'] = 'dinero'
+        elif projekt_map:
+            match = _match_paa_navn(e.get('description', ''), projekt_map)
+            if match:
+                e['project_code'] = match
+                e['tag_source']   = 'navn'
+            else:
+                e['tag_source'] = None
         else:
             e['tag_source'] = None
     return entries
@@ -476,8 +484,36 @@ def _projekt_map(all_data):
     for tid, t in all_data.items():
         if t.get('vundet') and not t.get('slettet'):
             code = f"PROJ-{t.get('nummer', 0):03d}"
-            pm[code] = {'id': tid, 'kunde': t.get('kunde', ''), 'nummer': t.get('nummer', 0)}
+            pm[code] = {
+                'id':     tid,
+                'kunde':  t.get('kunde', ''),
+                'site':   t.get('site', ''),
+                'nummer': t.get('nummer', 0),
+            }
     return pm
+
+
+def _match_paa_navn(desc, projekt_map):
+    """
+    Fallback matching: hvis ingen kode, prøv at matche på site eller
+    kunde-navn. Returnerer PROJ-XXX hvis ét entydigt match, ellers None.
+    """
+    if not desc:
+        return None
+    low = desc.lower()
+    # Prioriter site-navn (mere specifikt end kunde)
+    site_hits = [code for code, info in projekt_map.items()
+                 if info.get('site') and len(info['site'].strip()) >= 4
+                 and info['site'].strip().lower() in low]
+    if len(site_hits) == 1:
+        return site_hits[0]
+    # Fallback til kundenavn
+    kunde_hits = [code for code, info in projekt_map.items()
+                  if info.get('kunde') and len(info['kunde'].strip()) >= 4
+                  and info['kunde'].strip().lower() in low]
+    if len(kunde_hits) == 1:
+        return kunde_hits[0]
+    return None
 
 
 @app.route('/dinero/omkostninger')
@@ -495,11 +531,10 @@ def dinero_omkostninger():
         return f"Fejl ved hentning: {e} <a href='/admin'>Tilbage</a>", 500
 
     tags = load_data(DINERO_TAGS_FILE, {})
-    entries = _anvend_lokale_tags(entries, tags)
-    groups = dinero_api.group_entries_by_project(entries)
-
     all_data = load_data(TILBUD_FILE, {})
     projekt_map = _projekt_map(all_data)
+    entries = _anvend_lokale_tags(entries, tags, projekt_map)
+    groups = dinero_api.group_entries_by_project(entries)
 
     return render_template('dinero_omkostninger.html',
                            groups=groups,
@@ -955,7 +990,8 @@ def projekt_side(tilbud_id):
             aar = datetime.now().year
             entries = dinero_api.fetch_purchase_entries(f'{aar}-01-01', datetime.now().strftime('%Y-%m-%d'))
             tags = load_data(DINERO_TAGS_FILE, {})
-            entries = _anvend_lokale_tags(entries, tags)
+            pmap = _projekt_map(all_data)
+            entries = _anvend_lokale_tags(entries, tags, pmap)
             dinero_omk = [e for e in entries if e.get('project_code') == proj_code]
         except Exception:
             pass  # fejl ignoreres — manuelle tal vises stadig

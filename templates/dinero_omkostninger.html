@@ -66,6 +66,7 @@
         }
         .source-local  { background: #dbeafe; color: #1e40af; }
         .source-dinero { background: #e0e7ff; color: #3730a3; }
+        .source-navn   { background: #fef3c7; color: #92400e; }
         .kode-badge {
             font-family: ui-monospace, monospace;
             font-size: 0.7rem;
@@ -203,7 +204,9 @@
                     {% if e.tag_source == 'local' %}
                         <span class="source-badge source-local" title="Tagget i ERP">ERP</span>
                     {% elif e.tag_source == 'dinero' %}
-                        <span class="source-badge source-dinero" title="Tag fra Dinero-tekst">DINERO</span>
+                        <span class="source-badge source-dinero" title="Tag fra kode i Dinero-tekst">KODE</span>
+                    {% elif e.tag_source == 'navn' %}
+                        <span class="source-badge source-navn" title="Matchet på kunde/site-navn">NAVN</span>
                     {% endif %}
                 </div>
                 <div style="font-size:0.72rem; color:var(--text-muted);">{{ e.account }} · {{ e.account_name }}</div>

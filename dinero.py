@@ -273,13 +273,16 @@ def bogfør_faktura(guid, timestamp):
 # ────────── KØBSBILAG VIA ENTRIES ──────────
 
 VALID_INT_CODES = {"INT-ADMIN", "INT-DRIFT", "INT-KONTOR", "INT-MARKETING", "INT-SALG", "INT-PERSONALE", "INT-HISTORY"}
-_CODE_RE = re.compile(r'\[([A-Z]+-[A-Z0-9]+)\]')
+# Matcher PROJ-XX eller INT-XXX — med eller uden firkantede parenteser
+_CODE_RE = re.compile(r'(?<![A-Z0-9-])(PROJ-\d+|INT-[A-Z]+)(?![A-Z0-9-])')
 
 
 def parse_project_code(text: str) -> Optional[str]:
     """
-    Udtrækker en [PROJ-XXX] eller [INT-XXX] kode fra en tekst.
-    Returnerer koden (uden firkantede parenteser) eller None.
+    Udtrækker en PROJ-XXX eller INT-XXX kode fra en tekst.
+    Firkantede parenteser er valgfrie ([PROJ-012] og PROJ-012 virker begge).
+    PROJ-nummer normaliseres til 3 cifre (PROJ-12 → PROJ-012).
+    Returnerer koden eller None.
     """
     if not text:
         return None
@@ -288,7 +291,12 @@ def parse_project_code(text: str) -> Optional[str]:
         return None
     code = m.group(1)
     if code.startswith("PROJ-"):
-        return code
+        # Normaliser til 3 cifre
+        try:
+            nr = int(code.split("-")[1])
+            return f"PROJ-{nr:03d}"
+        except (ValueError, IndexError):
+            return code
     if code.startswith("INT-"):
         if code not in VALID_INT_CODES:
             log.warning("Ukendt intern kode '%s' i tekst: %s", code, text[:80])

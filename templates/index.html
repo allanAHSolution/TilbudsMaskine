@@ -431,10 +431,12 @@
                                     <button type="button" class="btn btn-xs btn-link p-0 text-decoration-none"
                                             style="font-size:0.7rem; color: var(--accent);"
                                             data-bs-toggle="collapse" data-bs-target="#fakt-form-{{ id }}">+ Tilføj faktura</button>
-                                    {% if fakturaer %}
+                                    {% set dinero_antal = dinero_salg_list_per_proj.get(proj_kode, [])|length %}
+                                    {% set fakt_antal = fakturaer|length + dinero_antal %}
+                                    {% if fakt_antal > 0 %}
                                     <button type="button" class="btn btn-xs btn-link p-0 text-decoration-none"
                                             style="font-size:0.7rem; color: var(--text-muted);"
-                                            data-bs-toggle="collapse" data-bs-target="#fakt-liste-{{ id }}">Vis {{ fakturaer|length }}</button>
+                                            data-bs-toggle="collapse" data-bs-target="#fakt-liste-{{ id }}">Vis {{ fakt_antal }}</button>
                                     {% endif %}
                                 </div>
                             </div>
@@ -472,7 +474,8 @@
                                     <button type="submit" class="btn btn-xs btn-success mt-1 w-100 fw-bold">Gem faktura</button>
                                 </form>
                             </div>
-                            {% if fakturaer %}
+                            {% set dinero_kun = dinero_salg_list_per_proj.get(proj_kode, []) %}
+                            {% if fakturaer or dinero_kun %}
                             <div class="collapse" id="fakt-liste-{{ id }}">
                                 <div class="mt-2">
                                     {% for f in fakturaer %}
@@ -488,10 +491,21 @@
                                             {% endif %}
                                         </span>
                                         <div class="d-flex gap-2 align-items-center">
-                                            <span class="fw-bold">{{ "{:,.0f}".format(f.beloeb) }} {{ t.valuta }}</span>
+                                            <span class="fw-bold">{{ "{:,.0f}".format(f.beloeb) }} {{ f.valuta or t.valuta }}</span>
                                             <a href="/faktura/slet/{{ id }}/{{ loop.index0 }}" onclick="return confirm('Slet faktura?')"
                                                class="text-danger text-decoration-none" style="font-size:0.75rem;">✕</a>
                                         </div>
+                                    </div>
+                                    {% endfor %}
+                                    {# Dinero-only fakturaer (matchet på kode/navn, ikke oprettet i ERP) #}
+                                    {% for i in dinero_kun %}
+                                    <div class="d-flex justify-content-between align-items-center py-1" style="border-bottom:1px solid #e0f2fe; font-size:0.72rem;">
+                                        <span>
+                                            {{ i.date }} — {{ i.description or 'Faktura' }}
+                                            <span class="badge ms-1" style="background:#0ea5e9; font-size:0.6rem;">DINERO · #{{ i.number }}</span>
+                                            <span class="badge ms-1" style="background:#fef3c7; color:#92400e; font-size:0.6rem;" title="Matchet automatisk">AUTO</span>
+                                        </span>
+                                        <span class="fw-bold">{{ "{:,.0f}".format(i.total_incl_vat) }} {{ i.currency }}</span>
                                     </div>
                                     {% endfor %}
                                 </div>

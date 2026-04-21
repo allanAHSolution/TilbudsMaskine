@@ -708,8 +708,9 @@ def admin_panel():
     faktureringsopgaver = _beregn_faktureringsopgaver(idag)
 
     # --- Hent Dinero-syncede salg/køb én gang (bruges nedenfor) ---
-    dinero_salg_per_proj = {}  # PROJ-XXX → sum
-    dinero_omk_per_proj  = {}  # PROJ-XXX → sum
+    dinero_salg_per_proj      = {}  # PROJ-XXX → sum (DKK)
+    dinero_salg_list_per_proj = {}  # PROJ-XXX → liste af fakturaer
+    dinero_omk_per_proj       = {}  # PROJ-XXX → sum (DKK)
     if DINERO_OK:
         try:
             pmap = _projekt_map(all_data)
@@ -728,6 +729,7 @@ def admin_panel():
                 if kode and kode.startswith('PROJ-'):
                     beloeb_dkk = til_dkk(float(i.get('total_incl_vat', 0)), i.get('currency', 'DKK'), kurser)
                     dinero_salg_per_proj[kode] = dinero_salg_per_proj.get(kode, 0) + beloeb_dkk
+                    dinero_salg_list_per_proj.setdefault(kode, []).append(i)
             # Købsbilag (omkostninger)
             entries = dinero_api.fetch_purchase_entries(f'{aar}-01-01', idag.strftime('%Y-%m-%d'))
             entries = _anvend_lokale_tags(entries, tags, pmap)
@@ -780,6 +782,7 @@ def admin_panel():
                            vundne=vundne,
                            vundne_grupper=vundne_grupper,
                            dinero_salg_per_proj=dinero_salg_per_proj,
+                           dinero_salg_list_per_proj=dinero_salg_list_per_proj,
                            dinero_omk_per_proj=dinero_omk_per_proj,
                            tabte=tabte,
                            arkiverede=arkiverede,

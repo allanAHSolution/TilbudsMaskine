@@ -757,7 +757,9 @@ def admin_panel():
             pval      = t.get('valuta', 'DKK')
             # Budget + lokale fakturaer er i projekt-valuta → konverter til DKK
             grp_total += til_dkk(sum(float(p.get('antal',1))*float(p.get('pris',0)) for p in t.get('produkter',[])), pval, kurser)
-            grp_fakt  += til_dkk(sum(float(f.get('beloeb',0)) for f in t.get('fakturaer',[])), pval, kurser)
+            # Hver faktura kan have sin egen valuta (fx DKK-faktura på NOK-projekt)
+            for f in t.get('fakturaer', []):
+                grp_fakt += til_dkk(float(f.get('beloeb',0)), f.get('valuta') or pval, kurser)
             grp_udg   += til_dkk(sum(float(o.get('beloeb',0)) for o in t.get('projekt',{}).get('omkostninger',[])), pval, kurser)
             # Dinero-salg og -køb er allerede i DKK (eller egen valuta for salg)
             grp_fakt  += dinero_salg_per_proj.get(proj_code, 0)  # antaget DKK (TODO: konverter salg-valuta)
@@ -1026,7 +1028,11 @@ def projekt_side(tilbud_id):
     budget         = _projekt_budget(t)
     budget_dkk     = til_dkk(budget, proj_valuta, kurser)
     faktureret     = sum(float(f.get('beloeb', 0)) for f in t.get('fakturaer', []))
-    faktureret_dkk = til_dkk(faktureret, proj_valuta, kurser)
+    # Pr-faktura valuta → summer DKK præcist
+    faktureret_dkk = sum(
+        til_dkk(float(f.get('beloeb', 0)), f.get('valuta') or proj_valuta, kurser)
+        for f in t.get('fakturaer', [])
+    )
     omkostninger   = t['projekt'].get('omkostninger', [])
     total_manuel   = sum(float(o.get('beloeb', 0)) for o in omkostninger)
     total_manuel_dkk = til_dkk(total_manuel, proj_valuta, kurser)
@@ -1396,11 +1402,14 @@ def faktura_tilfoej(tilbud_id):
     beloeb      = float(request.form.get('beloeb', 0) or 0)
     beskrivelse = request.form.get('beskrivelse', '')
     push_dinero = request.form.get('push_dinero') == 'on'
+    # Valuta kan overskrives pr. faktura (fx UNO-X projekter i NOK der faktureres DKK)
+    fak_valuta  = request.form.get('valuta', '').strip() or t.get('valuta', 'DKK')
 
     faktura = {
         "dato":        dato,
         "beskrivelse": beskrivelse,
         "beloeb":      beloeb,
+        "valuta":      fak_valuta,
     }
 
     # Auto-push til Dinero som kladde
@@ -1414,12 +1423,14 @@ def faktura_tilfoej(tilbud_id):
             site_str = f" · {t.get('site').strip()}" if t.get('site') else ''
             titel    = f"#{t.get('nummer')} {t.get('kunde','')}{site_str} — {beskrivelse}"
             komment  = f"{titel}\n\nJf. vores ordrebekræftelse nr. {t.get('nummer')}"
+            # Moms: altid 'nej' når fakturaen er i udenlandsk valuta (eksport)
+            moms_faktura = 'nej' if fak_valuta != 'DKK' else t.get('moms', 'ja')
             guid, ts = dinero_api.opret_faktura(
                 kunde_navn=t.get('kunde', ''),
                 linjer=linjer,
                 dato=dato_iso,
-                valuta=t.get('valuta', 'DKK'),
-                moms=t.get('moms', 'ja'),
+                valuta=fak_valuta,
+                moms=moms_faktura,
                 beskrivelse=titel,
                 kommentar=komment,
             )

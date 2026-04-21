@@ -202,10 +202,19 @@
                                     </div>
                                 </div>
                                 <div class="row g-2">
-                                    <div class="col-5">
-                                        <label class="form-label-xs">Beløb ({{ t.valuta }})</label>
+                                    <div class="col-3">
+                                        <label class="form-label-xs">Beløb</label>
                                         <input type="number" name="beloeb" class="form-control form-control-sm"
                                                step="0.01" min="0" placeholder="0" required>
+                                    </div>
+                                    <div class="col-2">
+                                        <label class="form-label-xs">Valuta</label>
+                                        <select name="valuta" class="form-select form-select-sm">
+                                            <option value="DKK" {{ 'selected' if t.valuta == 'DKK' }}>DKK</option>
+                                            <option value="NOK" {{ 'selected' if t.valuta == 'NOK' }}>NOK</option>
+                                            <option value="EUR" {{ 'selected' if t.valuta == 'EUR' }}>EUR</option>
+                                            <option value="SEK" {{ 'selected' if t.valuta == 'SEK' }}>SEK</option>
+                                        </select>
                                     </div>
                                     <div class="col-4">
                                         <label class="form-label-xs">Dato</label>
@@ -239,7 +248,7 @@
                                     {% endif %}
                                 </div>
                             </div>
-                            <span class="fw-bold" style="color: var(--green);">{{ "{:,.0f}".format(f.beloeb) }} {{ t.valuta }}</span>
+                            <span class="fw-bold" style="color: var(--green);">{{ "{:,.0f}".format(f.beloeb) }} {{ f.valuta or t.valuta }}</span>
                         </div>
                     </div>
                     {% endfor %}

@@ -371,6 +371,88 @@ def fetch_purchase_entries(from_date: str, to_date: str) -> list[dict]:
     return entries
 
 
+_invoice_detail_cache = {}  # guid → detail dict
+
+
+def _hent_invoice_detail(guid: str) -> dict:
+    """Cached lookup af fuld faktura-detalje (beløb, status osv.)."""
+    if guid in _invoice_detail_cache:
+        return _invoice_detail_cache[guid]
+    oid = _org_id()
+    res = requests.get(f"{API_BASE}/{oid}/invoices/{guid}", headers=_headers(), timeout=15)
+    if not res.ok:
+        return {}
+    j = res.json()
+    _invoice_detail_cache[guid] = j
+    return j
+
+
+def fetch_invoices(from_date: str = None, to_date: str = None,
+                   include_drafts: bool = False) -> list[dict]:
+    """
+    Henter alle salgsfakturaer fra Dinero (list + detail per faktura).
+
+    Returnerer liste af dicts med nøgler:
+        guid, number, date, contact_name, contact_guid, description,
+        total_excl_vat, total_incl_vat, currency, payment_status, status,
+        project_code (parset fra Description)
+    """
+    oid = _org_id()
+    all_rows = []
+    for page in range(20):
+        params = {"pageSize": 100, "page": page}
+        res = requests.get(
+            f"{API_BASE}/{oid}/invoices",
+            headers=_headers(), params=params, timeout=20,
+        )
+        if res.status_code == 401:
+            global _token_cache
+            _token_cache = {"access_token": None, "expires_at": 0}
+            raise RuntimeError("Dinero auth-fejl — token udløbet, prøv igen")
+        if not res.ok:
+            raise RuntimeError(f"Dinero invoices fejlede ({res.status_code}): {res.text[:300]}")
+        batch = res.json().get("Collection", [])
+        if not batch:
+            break
+        all_rows.extend(batch)
+        if len(batch) < 100:
+            break
+
+    # Filtrer på dato først for at minimere antal detalje-opslag
+    filtreret = []
+    for i in all_rows:
+        dato = i.get("Date", "")
+        if from_date and dato < from_date:
+            continue
+        if to_date and dato > to_date:
+            continue
+        filtreret.append(i)
+
+    ud = []
+    for i in filtreret:
+        # Hent detalje for beløb + status
+        detail = _hent_invoice_detail(i["Guid"])
+        status = detail.get("Status") or detail.get("PaymentStatus") or ""
+        if not include_drafts and status in ("Draft", "draft", "Kladde"):
+            continue
+        desc = detail.get("Description") or i.get("Description") or ""
+        ud.append({
+            "guid":           i["Guid"],
+            "number":         detail.get("Number"),
+            "date":           i.get("Date"),
+            "contact_name":   i.get("ContactName", ""),
+            "contact_guid":   detail.get("ContactGuid"),
+            "description":    desc,
+            "total_excl_vat": detail.get("TotalExclVat", 0),
+            "total_incl_vat": detail.get("TotalInclVat", 0),
+            "currency":       detail.get("Currency", "DKK"),
+            "payment_status": detail.get("PaymentStatus", ""),
+            "status":         status,
+            "project_code":   parse_project_code(desc),
+        })
+    return ud
+
+
 def group_entries_by_project(entries: list[dict]) -> dict[str, list[dict]]:
     """
     Grupperer en liste entries efter project_code.

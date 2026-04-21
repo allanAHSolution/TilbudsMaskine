@@ -112,8 +112,8 @@
         </div>
 
         <!-- ── KPI-kort ── -->
-        {% set margin_pct = ((margin / faktureret * 100)|round(0)|int) if faktureret > 0 else 0 %}
-        {% set budget_pct = ((faktureret / budget * 100)|round(0)|int) if budget > 0 else 0 %}
+        {% set margin_pct = ((margin / faktureret_total * 100)|round(0)|int) if faktureret_total > 0 else 0 %}
+        {% set budget_pct = ((faktureret_total / budget * 100)|round(0)|int) if budget > 0 else 0 %}
         <div class="row g-3 mb-4">
             <div class="col-6 col-md-3">
                 <div class="kpi-kort" style="background: var(--accent-lt); color: var(--accent);">
@@ -125,8 +125,12 @@
             <div class="col-6 col-md-3">
                 <div class="kpi-kort" style="background: var(--green-lt); color: var(--green);">
                     <div class="kpi-label">Faktureret</div>
-                    <div class="kpi-value">{{ "{:,.0f}".format(faktureret) }}</div>
-                    <div class="kpi-sub">{{ budget_pct }}% af budget</div>
+                    <div class="kpi-value">{{ "{:,.0f}".format(faktureret_total) }}</div>
+                    <div class="kpi-sub">
+                        {% if budget > 0 %}{{ ((faktureret_total / budget * 100)|round|int) }}% af budget
+                        {% elif dinero_salg %}inkl. {{ dinero_salg|length }} fra Dinero
+                        {% else %}ingen budget{% endif %}
+                    </div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
@@ -173,7 +177,7 @@
                         <i class="fa fa-line-chart me-1"></i> Omsætning / Fakturaer
                     </div>
                     <div class="small mb-3" style="color: var(--text-muted);">
-                        {{ t.fakturaer|default([])|length }} faktura(er) · {{ "{:,.0f}".format(faktureret) }} {{ t.valuta }}
+                        {{ (t.fakturaer|default([])|length) + (dinero_salg|default([])|length) }} faktura(er) · {{ "{:,.0f}".format(faktureret_total) }} {{ t.valuta }} i alt
                     </div>
 
                     {% for f in t.fakturaer|default([]) %}
@@ -193,7 +197,28 @@
                     </div>
                     {% endfor %}
 
-                    {% if not t.fakturaer %}
+                    {# Fakturaer oprettet direkte i Dinero, matchet på kode/navn #}
+                    {% if dinero_salg %}
+                    <div class="section-label mt-3 mb-2">
+                        <i class="fa fa-sync me-1"></i> Fra Dinero · direkte oprettet
+                    </div>
+                    {% for i in dinero_salg %}
+                    <div class="fakt-item" style="border-left-color:#0ea5e9; background:#f0f9ff;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="small fw-bold">{{ i.description or 'Faktura' }}</div>
+                                <div style="font-size:0.72rem; color: var(--text-muted);">
+                                    {{ i.date }} · Dinero #{{ i.number }}
+                                    {% if i.payment_status %} · {{ i.payment_status }}{% endif %}
+                                </div>
+                            </div>
+                            <span class="fw-bold" style="color: var(--green);">{{ "{:,.0f}".format(i.total_incl_vat) }} {{ i.currency }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+
+                    {% if not t.fakturaer and not dinero_salg %}
                     <div class="text-center py-4" style="color: var(--text-muted);">
                         <div class="small">Ingen fakturaer registreret endnu</div>
                     </div>

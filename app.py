@@ -982,32 +982,55 @@ def projekt_side(tilbud_id):
     omkostninger   = t['projekt'].get('omkostninger', [])
     total_manuel   = sum(float(o.get('beloeb', 0)) for o in omkostninger)
 
-    # Hent også Dinero-syncede omkostninger tagget til dette projekt
-    dinero_omk = []
-    proj_code  = f"PROJ-{t.get('nummer', 0):03d}"
+    # Hent Dinero-syncede omkostninger + salgsfakturaer tagget til projektet
+    dinero_omk   = []
+    dinero_salg  = []
+    proj_code    = f"PROJ-{t.get('nummer', 0):03d}"
     if DINERO_OK:
+        aar = datetime.now().year
+        pmap = _projekt_map(all_data)
+
+        # --- Omkostninger (købsbilag) ---
         try:
-            aar = datetime.now().year
             entries = dinero_api.fetch_purchase_entries(f'{aar}-01-01', datetime.now().strftime('%Y-%m-%d'))
             tags = load_data(DINERO_TAGS_FILE, {})
-            pmap = _projekt_map(all_data)
             entries = _anvend_lokale_tags(entries, tags, pmap)
             dinero_omk = [e for e in entries if e.get('project_code') == proj_code]
         except Exception:
-            pass  # fejl ignoreres — manuelle tal vises stadig
+            pass
 
-    total_dinero = sum(e['amount'] for e in dinero_omk)
-    total_omk    = total_manuel + total_dinero
-    margin       = faktureret - total_omk
+        # --- Salgsfakturaer (direkte oprettet i Dinero) ---
+        try:
+            invs = dinero_api.fetch_invoices(from_date=f'{aar}-01-01')
+            # Ekskludér fakturaer der allerede er i tilbud.fakturaer (pushet fra ERP)
+            kendte_guids = {f.get('dinero_guid') for f in t.get('fakturaer', []) if f.get('dinero_guid')}
+            for i in invs:
+                if i['guid'] in kendte_guids:
+                    continue
+                # Match via kode eller navn
+                kode = i.get('project_code') or _match_paa_navn(i.get('description', ''), pmap)
+                if kode == proj_code:
+                    dinero_salg.append(i)
+        except Exception:
+            pass
+
+    total_dinero        = sum(e['amount'] for e in dinero_omk)
+    total_omk           = total_manuel + total_dinero
+    total_salg_dinero   = sum(float(i.get('total_incl_vat', 0)) for i in dinero_salg)
+    faktureret_total    = faktureret + total_salg_dinero
+    margin              = faktureret_total - total_omk
 
     return render_template('projekt.html',
                            t=t, id=tilbud_id,
                            budget=budget,
                            faktureret=faktureret,
+                           faktureret_total=faktureret_total,
                            total_omk=total_omk,
                            total_manuel=total_manuel,
                            total_dinero=total_dinero,
+                           total_salg_dinero=total_salg_dinero,
                            dinero_omk=dinero_omk,
+                           dinero_salg=dinero_salg,
                            proj_code=proj_code,
                            margin=margin,
                            now_date=datetime.now().strftime('%Y-%m-%d'))

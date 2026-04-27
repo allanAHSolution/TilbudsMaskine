@@ -1332,9 +1332,36 @@ def _beregn_faktureringsopgaver(idag):
 
     # ── Vundne tilbud – betalingsrater ──
     all_tilbud = load_data(TILBUD_FILE, {})
+    indstillinger_local = load_data(INDSTILLINGER_FILE, {"kurser": {"NOK": 0.63, "EUR": 7.46, "SEK": 0.67}})
+    kurser_local = indstillinger_local.get("kurser", {"NOK": 0.63, "EUR": 7.46, "SEK": 0.67})
+
+    # Hent Dinero-matchede fakturaer pr. projekt for at få korrekt faktureret-sum
+    dinero_fakt_dkk = {}  # PROJ-XXX → sum DKK
+    if DINERO_OK:
+        try:
+            pmap = _projekt_map(all_tilbud)
+            kendte = set()
+            for t in all_tilbud.values():
+                for f in t.get('fakturaer', []):
+                    if f.get('dinero_guid'):
+                        kendte.add(f['dinero_guid'])
+            invs = dinero_api.fetch_invoices(from_date=f'{idag.year}-01-01')
+            for i in invs:
+                if i['guid'] in kendte:
+                    continue
+                kode = i.get('project_code') or _match_paa_navn(i.get('description', ''), pmap)
+                if kode and kode.startswith('PROJ-'):
+                    bdkk = til_dkk(float(i.get('total_incl_vat', 0)), i.get('currency', 'DKK'), kurser_local)
+                    dinero_fakt_dkk[kode] = dinero_fakt_dkk.get(kode, 0) + bdkk
+        except Exception:
+            pass
+
     for t in all_tilbud.values():
         if t.get('vundet') is not True or t.get('slettet') or t.get('arkiveret'):
             continue
+
+        valuta   = t.get('valuta', 'NOK')
+        betaling = t.get('betaling', '5050')
 
         total = sum(
             float(p.get('antal', 1)) * float(p.get('pris', 0))
@@ -1342,10 +1369,20 @@ def _beregn_faktureringsopgaver(idag):
         )
         if total <= 0:
             continue
+        # Tilbudssum konverteres til DKK for sammenligning på tværs af valutaer
+        total_dkk = til_dkk(total, valuta, kurser_local)
 
-        faktureret = sum(float(f.get('beloeb', 0)) for f in t.get('fakturaer', []))
-        valuta = t.get('valuta', 'NOK')
-        betaling = t.get('betaling', '5050')
+        # Faktureret = lokale fakturaer (egen valuta pr stk) + Dinero-matchede (allerede DKK)
+        faktureret_dkk = sum(
+            til_dkk(float(f.get('beloeb', 0)), f.get('valuta') or valuta, kurser_local)
+            for f in t.get('fakturaer', [])
+        )
+        proj_kode = f"PROJ-{t.get('nummer', 0):03d}"
+        faktureret_dkk += dinero_fakt_dkk.get(proj_kode, 0)
+
+        # Brug DKK-værdier til rate-sammenligning
+        total      = total_dkk
+        faktureret = faktureret_dkk
 
         # Definer rater: (label, andel, dage-til-forfald)
         if betaling == '5050':
@@ -1360,15 +1397,20 @@ def _beregn_faktureringsopgaver(idag):
                 ("Rate 3 – 20% (afslutning)", 0.20, 999),
             ]
 
-        # Vis rater der endnu ikke er dækket af faktureret beløb
-        akkumuleret = 0.0
+        # Vis rater der endnu ikke er dækket af faktureret beløb (alt i DKK)
+        # rate_beloeb til visning beregnes i original valuta så det ligner tilbuddet
+        total_orig = sum(
+            float(p.get('antal', 1)) * float(p.get('pris', 0))
+            for p in t.get('produkter', [])
+        )
+        akkumuleret_dkk = 0.0
         for rate_label, rate_pct, rate_dage in rater:
-            rate_beloeb = round(total * rate_pct, 2)
-            akkumuleret += rate_beloeb
-            if faktureret < akkumuleret - 0.01:
+            rate_beloeb_orig = round(total_orig * rate_pct, 2)
+            akkumuleret_dkk += round(total * rate_pct, 2)  # total er DKK her
+            if faktureret < akkumuleret_dkk - 0.01:
                 opgaver.append({
                     'titel':   f"#{t.get('nummer')} {t.get('kunde', '')} – {rate_label}",
-                    'beloeb':  rate_beloeb,
+                    'beloeb':  rate_beloeb_orig,
                     'valuta':  valuta,
                     'forfald': '',
                     'dage':    rate_dage,

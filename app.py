@@ -82,53 +82,68 @@ def til_dkk(beloeb, valuta, kurser):
     return beloeb * kurser.get(valuta, 1.0)
 
 
-def beregn_statistik_opdelt(all_data, malte_data, unox_data, kurser, aar):
-    """Returnerer omsætning opdelt i produkter/timer/kommission per måned."""
+def _kategoriser_faktura(beskrivelse, kunde):
+    """Klassificér en faktura som produkter / timer / kommission baseret
+    på tekst. Bruges til opdelt omsætningsgraf."""
+    b = (beskrivelse or '').lower()
+    k = (kunde or '').lower()
+    if 'malte' in k:
+        if 'provision' in b: return 'kommission'
+        return 'timer'
+    if 'uno-x' in k or 'uno x' in k:
+        if 'timer' in b or 'konsulent' in b or 'uge' in b:
+            return 'timer'
+    if 'timer' in b or 'konsulent' in b:
+        return 'timer'
+    return 'produkter'
+
+
+def beregn_statistik_opdelt(all_data, malte_data, unox_data, kurser, aar,
+                              dinero_invs_alle=None):
+    """
+    Returnerer omsætning opdelt i produkter/timer/kommission per måned.
+
+    Bruger faktura-datoer (ikke tilbuds-dato), inkluderer Dinero-only
+    fakturaer matchet på kode/navn, og konverterer alt til DKK.
+    """
     result = {m: {"produkter": 0.0, "timer": 0.0, "kommission": 0.0} for m in MAANEDER}
+    kendte_dinero_guids = set()
 
-    # ── Produkter: vundne tilbud ──
+    # ── Lokale fakturaer på vundne tilbud (også fra tidligere års tilbud!) ──
     for t in all_data.values():
-        if t.get('vundet') is True and not t.get('slettet'):
+        if t.get('slettet'):
+            continue
+        proj_valuta = t.get('valuta', 'DKK')
+        kunde_navn  = t.get('kunde', '')
+        for f in t.get('fakturaer', []):
             try:
-                dato = datetime.strptime(t['dato'], '%d-%m-%Y')
-                if dato.year == aar:
-                    mnd = MAANEDER[dato.month - 1]
-                    valuta = t.get('valuta', 'NOK')
-                    for p in t.get('produkter', []):
-                        beloeb = float(p.get('antal', 1)) * float(p.get('pris', 0))
-                        result[mnd]['produkter'] += til_dkk(beloeb, valuta, kurser)
-            except Exception:
-                pass
+                dato = datetime.strptime(f.get('dato', ''), '%d-%m-%Y')
+            except (ValueError, TypeError):
+                continue
+            if dato.year != aar:
+                continue
+            beloeb_dkk = til_dkk(float(f.get('beloeb', 0)),
+                                 f.get('valuta') or proj_valuta, kurser)
+            kat = _kategoriser_faktura(f.get('beskrivelse', ''), kunde_navn)
+            result[MAANEDER[dato.month - 1]][kat] += beloeb_dkk
+            if f.get('dinero_guid'):
+                kendte_dinero_guids.add(f['dinero_guid'])
 
-    # ── Timer: Malte retainer (fakturerede måneder) ──
-    mind = malte_data.get('indstillinger', {})
-    retainer_beloeb = mind.get('timer', 0) * mind.get('timepris', 0)
-    malte_valuta = mind.get('valuta', 'SEK')
-    for maaned_key in malte_data.get('retainer_faktureret', {}):
-        try:
-            dato = datetime.strptime(maaned_key, '%Y-%m')
-            if dato.year == aar:
-                result[MAANEDER[dato.month - 1]]['timer'] += til_dkk(retainer_beloeb, malte_valuta, kurser)
-        except Exception:
-            pass
-
-    # ── Timer: UNO-X perioder (fakturerede) ──
-    uind = unox_data.get('indstillinger', {})
-    unox_beloeb = uind.get('timer_pr_periode', 74) * uind.get('timepris', 0)
-    unox_valuta = uind.get('valuta', 'DKK')
-    for key in unox_data.get('perioder_faktureret', {}):
-        try:
-            dato = datetime.strptime(key, '%Y-%m-%d')
-            if dato.year == aar:
-                result[MAANEDER[dato.month - 1]]['timer'] += til_dkk(unox_beloeb, unox_valuta, kurser)
-        except Exception:
-            pass
-
-    # ── Kommission: Malte provision (fakturerede kvartaler) ──
-    for kv in _malte_oversigt(malte_data).values():
-        if kv.get('faktureret') and kv.get('slut') and kv['slut'].year == aar:
-            mnd = MAANEDER[kv['slut'].month - 1]
-            result[mnd]['kommission'] += til_dkk(kv['total_provision'], malte_valuta, kurser)
+    # ── Dinero-only fakturaer (oprettet direkte i Dinero, ikke via ERP) ──
+    if dinero_invs_alle:
+        for i in dinero_invs_alle:
+            if i.get('guid') in kendte_dinero_guids:
+                continue
+            try:
+                dato = datetime.strptime(i.get('date', ''), '%Y-%m-%d')
+            except (ValueError, TypeError):
+                continue
+            if dato.year != aar:
+                continue
+            beloeb_dkk = til_dkk(float(i.get('total_incl_vat', 0)),
+                                 i.get('currency', 'DKK'), kurser)
+            kat = _kategoriser_faktura(i.get('description', ''), i.get('contact_name', ''))
+            result[MAANEDER[dato.month - 1]][kat] += beloeb_dkk
 
     return result
 
@@ -691,7 +706,17 @@ def admin_panel():
 
     malte_data = load_data(MALTE_FILE, _malte_default())
     unox_data  = load_data(UNOX_FILE, _unox_default())
-    statistik_opdelt = beregn_statistik_opdelt(all_data, malte_data, unox_data, kurser, aar)
+
+    # Hent ALLE Dinero-fakturaer for året — bruges af både stat og pr-projekt
+    dinero_invs_alle = []
+    if DINERO_OK:
+        try:
+            dinero_invs_alle = dinero_api.fetch_invoices(from_date=f'{aar}-01-01')
+        except Exception:
+            pass
+
+    statistik_opdelt = beregn_statistik_opdelt(all_data, malte_data, unox_data,
+                                                kurser, aar, dinero_invs_alle)
     max_val = max((sum(v.values()) for v in statistik_opdelt.values()), default=1) or 1
     now_date = idag.strftime('%Y-%m-%d')
 
@@ -707,7 +732,7 @@ def admin_panel():
     )
     faktureringsopgaver = _beregn_faktureringsopgaver(idag)
 
-    # --- Hent Dinero-syncede salg/køb én gang (bruges nedenfor) ---
+    # --- Aggregér pr. projekt fra de allerede-hentede Dinero-data ---
     dinero_salg_per_proj      = {}  # PROJ-XXX → sum (DKK)
     dinero_salg_list_per_proj = {}  # PROJ-XXX → liste af fakturaer
     dinero_omk_per_proj       = {}  # PROJ-XXX → sum (DKK)
@@ -715,14 +740,13 @@ def admin_panel():
         try:
             pmap = _projekt_map(all_data)
             tags = load_data(DINERO_TAGS_FILE, {})
-            # Salgsfakturaer (direkte i Dinero)
+            # Salgsfakturaer matchet til projekter
             kendte_guids = set()
             for t in vundne.values():
                 for f in t.get('fakturaer', []):
                     if f.get('dinero_guid'):
                         kendte_guids.add(f['dinero_guid'])
-            invs = dinero_api.fetch_invoices(from_date=f'{aar}-01-01')
-            for i in invs:
+            for i in dinero_invs_alle:
                 if i['guid'] in kendte_guids:
                     continue
                 kode = i.get('project_code') or _match_paa_navn(i.get('description', ''), pmap)

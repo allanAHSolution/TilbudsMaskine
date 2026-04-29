@@ -166,12 +166,12 @@
                     <label class="form-label-xs">Salgspris (DKK)</label>
                     <input type="number" step="0.01" name="pris" class="form-control form-control-sm" placeholder="0" required>
                 </div>
-                <div style="flex:3; min-width:160px;">
+                <div style="flex:4; min-width:230px;">
                     <label class="form-label-xs">Kostpris</label>
                     <div class="d-flex gap-1 align-items-center">
                         <input type="number" step="0.01" name="kostpris_input" class="form-control form-control-sm kostpris-input"
                                placeholder="0" data-target-add>
-                        <select name="kostpris_valuta" class="form-select form-select-sm kostpris-valuta" style="max-width:70px;" data-target-add>
+                        <select name="kostpris_valuta" class="form-select form-select-sm kostpris-valuta" style="min-width:80px; flex:0 0 80px;" data-target-add>
                             <option value="DKK">DKK</option>
                             <option value="USD">USD</option>
                             <option value="EUR">EUR</option>
@@ -205,7 +205,7 @@
         <div class="header-row">
             <div style="flex:5;">Navn</div>
             <div style="flex:2;">Salgspris (DKK)</div>
-            <div style="flex:3;">Kostpris</div>
+            <div style="flex:4;">Kostpris</div>
             <div style="flex:1.5;">Enhed</div>
             <div style="flex:3;">Leverandør</div>
             <div style="flex:2;"></div>
@@ -221,12 +221,12 @@
                 <div style="flex:2; min-width:70px;">
                     <input type="number" step="0.01" name="pris" value="{{ p.pris }}" class="form-control form-control-sm">
                 </div>
-                <div style="flex:3; min-width:160px;">
+                <div style="flex:4; min-width:230px;">
                     <div class="d-flex gap-1 align-items-center">
                         <input type="number" step="0.01" name="kostpris_input"
                                value="{{ p.get('kostpris_orig', p.get('kostpris', '')) }}"
                                class="form-control form-control-sm kostpris-input" placeholder="0">
-                        <select name="kostpris_valuta" class="form-select form-select-sm kostpris-valuta" style="max-width:70px;">
+                        <select name="kostpris_valuta" class="form-select form-select-sm kostpris-valuta" style="min-width:80px; flex:0 0 80px;">
                             <option value="DKK" {{ 'selected' if (p.get('kostpris_valuta') or 'DKK') == 'DKK' }}>DKK</option>
                             <option value="USD" {{ 'selected' if p.get('kostpris_valuta') == 'USD' }}>USD</option>
                             <option value="EUR" {{ 'selected' if p.get('kostpris_valuta') == 'EUR' }}>EUR</option>
@@ -461,37 +461,56 @@
     const KURSER_KOSTPRIS = JSON.parse(document.getElementById('kurser-data').textContent);
 
     function konverterTilDkk(beloeb, valuta) {
-        if (!beloeb || valuta === 'DKK') return beloeb || 0;
+        if (!beloeb) return 0;
+        if (valuta === 'DKK' || !valuta) return beloeb;
         const k = KURSER_KOSTPRIS[valuta];
         return k ? beloeb * k : beloeb;
     }
 
-    function opdaterKostprisVisning(row) {
-        const input  = row.querySelector('.kostpris-input');
-        const valuta = row.querySelector('.kostpris-valuta');
-        const display = row.querySelector('.kostpris-dkk');
+    function findWrapper(el) {
+        // Find den nærmeste .d-flex der indeholder kostpris-elementerne
+        let n = el;
+        while (n && n !== document.body) {
+            if (n.classList && n.classList.contains('d-flex') &&
+                n.querySelector('.kostpris-input') &&
+                n.querySelector('.kostpris-valuta') &&
+                n.querySelector('.kostpris-dkk')) {
+                return n;
+            }
+            n = n.parentElement;
+        }
+        return null;
+    }
+
+    function opdaterKostprisVisning(wrapper) {
+        if (!wrapper) return;
+        const input  = wrapper.querySelector('.kostpris-input');
+        const valuta = wrapper.querySelector('.kostpris-valuta');
+        const display = wrapper.querySelector('.kostpris-dkk');
         if (!input || !valuta || !display) return;
-        const beloeb = parseFloat(input.value) || 0;
+        const beloeb = parseFloat(input.value);
+        if (isNaN(beloeb) || beloeb === 0) {
+            display.textContent = '= 0 DKK';
+            return;
+        }
         const dkk = konverterTilDkk(beloeb, valuta.value);
         display.textContent = '= ' + Math.round(dkk).toLocaleString('da-DK') + ' DKK';
     }
 
     document.addEventListener('input', function(e) {
-        if (e.target.classList.contains('kostpris-input') || e.target.classList.contains('kostpris-valuta')) {
-            const row = e.target.closest('form') || e.target.closest('div.d-flex');
-            if (row) opdaterKostprisVisning(row);
+        if (e.target.classList.contains('kostpris-input')) {
+            opdaterKostprisVisning(findWrapper(e.target));
         }
     });
     document.addEventListener('change', function(e) {
-        if (e.target.classList.contains('kostpris-valuta')) {
-            const row = e.target.closest('form') || e.target.closest('div.d-flex');
-            if (row) opdaterKostprisVisning(row);
+        if (e.target.classList.contains('kostpris-valuta') ||
+            e.target.classList.contains('kostpris-input')) {
+            opdaterKostprisVisning(findWrapper(e.target));
         }
     });
-    // Init på alle rækker ved load
+    // Init alle eksisterende rækker
     document.querySelectorAll('.kostpris-input').forEach(inp => {
-        const row = inp.closest('form') || inp.closest('div.d-flex');
-        if (row) opdaterKostprisVisning(row);
+        opdaterKostprisVisning(findWrapper(inp));
     });
 </script>
 </body>

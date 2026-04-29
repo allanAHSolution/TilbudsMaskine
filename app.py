@@ -1110,8 +1110,10 @@ def projekt_side(tilbud_id):
         save_data(TILBUD_FILE, all_data)
 
     # Valutakurser til konvertering (alt samles i DKK for korrekt margin)
-    indstillinger = load_data(INDSTILLINGER_FILE, {"kurser": {"NOK": 0.63, "EUR": 7.46, "SEK": 0.67}})
-    kurser        = indstillinger.get("kurser", {"NOK": 0.63, "EUR": 7.46, "SEK": 0.67})
+    # Merge defaults så manglende kurser (USD/SEK) altid er tilstede
+    indstillinger = load_data(INDSTILLINGER_FILE, {})
+    default_kurser = {"NOK": 0.63, "EUR": 7.46, "SEK": 0.67, "USD": 6.85}
+    kurser        = {**default_kurser, **(indstillinger.get("kurser") or {})}
     proj_valuta   = t.get('valuta', 'DKK')
 
     budget         = _projekt_budget(t)

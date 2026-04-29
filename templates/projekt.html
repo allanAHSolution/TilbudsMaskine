@@ -117,9 +117,20 @@
         <div class="row g-3 mb-4">
             <div class="col-6 col-md-3">
                 <div class="kpi-kort" style="background: var(--accent-lt); color: var(--accent);">
-                    <div class="kpi-label">Budget (tilbud)</div>
-                    <div class="kpi-value">{{ "{:,.0f}".format(budget) }}</div>
-                    <div class="kpi-sub">{{ proj_valuta }}{% if proj_valuta != 'DKK' and budget > 0 %} · {{ "{:,.0f}".format(budget_dkk) }} DKK{% endif %}</div>
+                    <div class="kpi-label">Salgs-/Kostbudget</div>
+                    <div style="display:flex; flex-direction:column; gap:6px; margin-top:4px;">
+                        <div>
+                            <div style="font-size:0.65rem; opacity:0.7; text-transform:uppercase; letter-spacing:0.5px;">Indtjening</div>
+                            <div style="font-size:1.15rem; font-weight:800; line-height:1.1;">{{ "{:,.0f}".format(budget_dkk) }} DKK</div>
+                            {% if proj_valuta != 'DKK' and budget > 0 %}
+                            <div style="font-size:0.65rem; opacity:0.6;">{{ "{:,.0f}".format(budget) }} {{ proj_valuta }}</div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <div style="font-size:0.65rem; opacity:0.7; text-transform:uppercase; letter-spacing:0.5px; color:#b45309;">Kostbudget</div>
+                            <div style="font-size:1.15rem; font-weight:800; line-height:1.1; color:#b45309;">{{ "{:,.0f}".format(omk_budget_dkk) }} DKK</div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="col-6 col-md-3">

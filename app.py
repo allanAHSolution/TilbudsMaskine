@@ -110,8 +110,9 @@ def _f(s, default=0.0):
 def gæt_hs_kode(navn):
     """
     Foreslår en HS-kode (TARIC) baseret på produktnavn.
-    Domænespecifik for vandrensning/spildevand. Returnerer tom streng
-    hvis ingen match (typisk service/konsulent).
+    Domænespecifik for vandrensning/spildevand. Forudsætter at tanke,
+    olieudskillere, brønde, karme og kombi-enheder fra Ahlsell/Watercare
+    er PE-plast (3925.x). Returnerer tom streng hvis ingen match.
     """
     n = (navn or '').lower()
 
@@ -121,25 +122,30 @@ def gæt_hs_kode(navn):
                              'idriftsät', 'opstart', 'pris i alt', 'total', 'fragt']):
         return ''
 
-    # Pumper
+    # PE-plast vand-/spildevandsudstyr fra Watercare/Ahlsell først
+    # (matches på 'brønd' før 'pumpe' så pumpebrønd bliver plastic, ikke pumpe)
+    # 3925.10.00 — Reservoirer/tanke/beholdere af plast >300L
+    if 'pumpebrønd' in n: return '3925.10.00'
+    if 'prøvetagning' in n or 'brønd' in n: return '3925.10.00'
+    if 'olieudskill' in n or 'fedtudskill' in n: return '3925.10.00'
+    if 'tungmetal' in n: return '3925.10.00'
+    if 'sandfang' in n: return '3925.10.00'
+    if 'kombitank' in n or 'buffertank' in n or 'plasttank' in n: return '3925.10.00'
+    if 'kombi' in n and ('tank' in n or 'sf' in n or 'sandfang' in n): return '3925.10.00'
+    if 'tank' in n: return '3925.10.00'
+
+    # Pumper (efter brønd-checks så 'pumpebrønd' ikke rammer her)
     if 'doseringspumpe' in n: return '8413.50.20'
     if 'feed pump' in n or 'feedpump' in n: return '8413.81.00'
     if 'sump pump' in n or 'sumppump' in n or 'dykpumpe' in n: return '8413.70.21'
     if 'pumpe' in n: return '8413.70.21'
 
-    # Filtrering / udskillere
-    if 'olieudskill' in n or 'fedtudskill' in n or 'tungmetal' in n: return '8421.21.99'
+    # Karm/dæksel (PE/plast bygningsudstyr)
+    if 'karm' in n or 'dæksel' in n: return '3925.90.20'
+
+    # Filtre med moving/filter-medier (selvrensende osv. har funktionelt apparat)
+    if 'selvrensende filter' in n: return '8421.29.00'
     if 'filter' in n: return '8421.29.00'
-
-    # Beholdere / tanke
-    if 'kombitank' in n or 'buffertank' in n or 'plasttank' in n: return '7309.00.30'
-    if 'tank' in n: return '7309.00.30'
-
-    # Brønde / karme (typisk beton eller stål)
-    if 'sandfang' in n: return '6810.91.00'
-    if 'pumpebrønd' in n: return '7308.90.99'
-    if 'prøvetagning' in n or 'brønd' in n: return '7308.90.99'
-    if 'karm' in n or 'dæksel' in n: return '7308.90.99'
 
     # Sensorer / måling
     if 'radar' in n and ('sensor' in n or 'level' in n or 'niveau' in n): return '9026.10.81'
@@ -152,8 +158,8 @@ def gæt_hs_kode(navn):
     if 'alarm' in n: return '8531.10.95'
 
     # Fittings / rør
-    if 'fitting' in n or 'rørdele' in n: return '7307.99.80'
-    if 'rør' in n: return '7304.90.00'
+    if 'fitting' in n or 'rørdele' in n: return '3917.40.00'  # plast fittings (PE)
+    if 'rør' in n: return '3917.21.10'  # PE rør
 
     # Vogne / transportudstyr
     if 'hjulvogn' in n or 'vogn' in n: return '8716.80.00'
@@ -1162,12 +1168,17 @@ def manage_products():
                 "leverandoer":     request.form.get('leverandoer', '')
             }
         elif action == 'foreslå_hs':
-            # Fyld tomme HS-koder ud baseret på produktnavn
+            # Fyld TOMME HS-koder ud baseret på produktnavn
             for p in products:
                 if not (p.get('hs_kode') or '').strip():
                     forslag = gæt_hs_kode(p.get('navn', ''))
                     if forslag:
                         p['hs_kode'] = forslag
+        elif action == 'genberegn_hs':
+            # Overskriv ALLE HS-koder med nye gæt (fx efter regelopdatering)
+            for p in products:
+                forslag = gæt_hs_kode(p.get('navn', ''))
+                p['hs_kode'] = forslag
         save_data(PRODUKTER_FILE, products)
         return redirect(url_for('manage_products'))
 

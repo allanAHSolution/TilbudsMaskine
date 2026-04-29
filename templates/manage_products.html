@@ -232,8 +232,16 @@
             <span class="small text-muted ms-auto" id="produkt-tal">{{ produkter|length }} produkter</span>
             <form method="POST" action="/admin/produkter" style="display:inline;">
                 <input type="hidden" name="action" value="foreslå_hs">
-                <button type="submit" class="btn btn-sm btn-outline-info" title="Auto-udfyld tomme HS-koder ud fra produktnavn">
+                <button type="submit" class="btn btn-sm btn-outline-info" title="Auto-udfyld TOMME HS-koder ud fra produktnavn">
                     <i class="fa fa-magic me-1"></i> Foreslå HS-koder
+                </button>
+            </form>
+            <form method="POST" action="/admin/produkter" style="display:inline;"
+                  onsubmit="return confirm('Overskriv ALLE HS-koder med ny auto-gætning? Manuelt indtastede koder mistes.');">
+                <input type="hidden" name="action" value="genberegn_hs">
+                <button type="submit" class="btn btn-sm btn-outline-warning"
+                        title="Overskriv alle HS-koder — bruges efter regel-opdatering (fx PE-plast)">
+                    <i class="fa fa-refresh me-1"></i> Genberegn ALLE
                 </button>
             </form>
         </div>

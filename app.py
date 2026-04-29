@@ -970,13 +970,6 @@ def opret_tilbud():
     kostpriser     = request.form.getlist('p_kostpris')
     beskrivelser   = request.form.getlist('p_beskrivelse')
 
-    def _to_float(s):
-        """Parser dansk talformat: '1.234,56' eller '1234.56' → float."""
-        if not s: return 0.0
-        s = str(s).strip().replace('.', '').replace(',', '.') if ',' in str(s) else str(s).strip()
-        try: return float(s)
-        except ValueError: return 0.0
-
     produkter = []
     for i, navn in enumerate(navne):
         if navn.strip():
@@ -984,7 +977,7 @@ def opret_tilbud():
                 "navn":        navn,
                 "antal":       antal_list[i] if i < len(antal_list) else "1",
                 "pris":        priser[i] if i < len(priser) else "0",
-                "kostpris":    _to_float(kostpriser[i]) if i < len(kostpriser) else 0.0,
+                "kostpris":    _f(kostpriser[i]) if i < len(kostpriser) else 0.0,
                 "beskrivelse": beskrivelser[i] if i < len(beskrivelser) else "",
             })
 

@@ -843,6 +843,7 @@ def manage_products():
             products.append({
                 "navn": request.form.get('navn'),
                 "pris": float(request.form.get('pris', 0)),
+                "kostpris": float(request.form.get('kostpris', 0) or 0),
                 "enhed": request.form.get('enhed', ''),
                 "leverandoer": request.form.get('leverandoer', '')
             })
@@ -854,6 +855,7 @@ def manage_products():
             products[index] = {
                 "navn": request.form.get('navn'),
                 "pris": float(request.form.get('pris', 0)),
+                "kostpris": float(request.form.get('kostpris', 0) or 0),
                 "enhed": request.form.get('enhed', ''),
                 "leverandoer": request.form.get('leverandoer', '')
             }
@@ -911,19 +913,28 @@ def opret_tilbud():
     all_data = load_data(TILBUD_FILE, {})
 
     # Saml produktlinjer
-    navne = request.form.getlist('p_navn')
-    antal_list = request.form.getlist('p_antal')
-    priser = request.form.getlist('p_pris')
-    beskrivelser = request.form.getlist('p_beskrivelse')
+    navne          = request.form.getlist('p_navn')
+    antal_list     = request.form.getlist('p_antal')
+    priser         = request.form.getlist('p_pris')
+    kostpriser     = request.form.getlist('p_kostpris')
+    beskrivelser   = request.form.getlist('p_beskrivelse')
+
+    def _to_float(s):
+        """Parser dansk talformat: '1.234,56' eller '1234.56' → float."""
+        if not s: return 0.0
+        s = str(s).strip().replace('.', '').replace(',', '.') if ',' in str(s) else str(s).strip()
+        try: return float(s)
+        except ValueError: return 0.0
 
     produkter = []
     for i, navn in enumerate(navne):
         if navn.strip():
             produkter.append({
-                "navn": navn,
-                "antal": antal_list[i] if i < len(antal_list) else "1",
-                "pris": priser[i] if i < len(priser) else "0",
-                "beskrivelse": beskrivelser[i] if i < len(beskrivelser) else ""
+                "navn":        navn,
+                "antal":       antal_list[i] if i < len(antal_list) else "1",
+                "pris":        priser[i] if i < len(priser) else "0",
+                "kostpris":    _to_float(kostpriser[i]) if i < len(kostpriser) else 0.0,
+                "beskrivelse": beskrivelser[i] if i < len(beskrivelser) else "",
             })
 
     try:
@@ -1061,6 +1072,11 @@ def projekt_side(tilbud_id):
 
     budget         = _projekt_budget(t)
     budget_dkk     = til_dkk(budget, proj_valuta, kurser)
+    # Kostpris-baseret budget (intern forbrugsestimat) — altid i DKK
+    omk_budget_dkk = sum(
+        float(p.get('antal', 1)) * float(p.get('kostpris', 0) or 0)
+        for p in t.get('produkter', [])
+    )
     faktureret     = sum(float(f.get('beloeb', 0)) for f in t.get('fakturaer', []))
     # Pr-faktura valuta → summer DKK præcist
     faktureret_dkk = sum(
@@ -1118,6 +1134,7 @@ def projekt_side(tilbud_id):
                            t=t, id=tilbud_id,
                            budget=budget,                  # i projekt-valuta
                            budget_dkk=budget_dkk,
+                           omk_budget_dkk=omk_budget_dkk,  # kostpris-budget (DKK)
                            faktureret=faktureret,          # lokale fakturaer i proj-valuta
                            faktureret_total_dkk=faktureret_total_dkk,
                            total_omk_dkk=total_omk_dkk,

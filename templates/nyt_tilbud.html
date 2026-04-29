@@ -163,13 +163,19 @@
                                             </div>
                                             <div class="produkt-valglist"></div>
                                         </div>
-                                        <div class="col-2">
+                                        <div class="col-1">
                                             <input type="number" name="p_antal" class="form-control form-control-sm"
                                                    value="{{ p.antal }}" min="0" placeholder="Antal">
                                         </div>
-                                        <div class="col-3">
+                                        <div class="col-2">
                                             <input type="text" name="p_pris" class="form-control form-control-sm"
-                                                   value="{{ p.pris }}" placeholder="Pris">
+                                                   value="{{ p.pris }}" placeholder="Salgspris">
+                                        </div>
+                                        <div class="col-2">
+                                            <input type="text" name="p_kostpris" class="form-control form-control-sm"
+                                                   value="{{ p.kostpris if p.kostpris is defined else '' }}"
+                                                   placeholder="Kostpris" style="background:#fffbeb;"
+                                                   title="Intern kostpris — vises ikke på kundetilbud">
                                         </div>
                                     </div>
                                     <input type="text" name="p_beskrivelse" class="form-control form-control-sm desc-input"
@@ -193,13 +199,18 @@
                                             </div>
                                             <div class="produkt-valglist"></div>
                                         </div>
-                                        <div class="col-2">
+                                        <div class="col-1">
                                             <input type="number" name="p_antal" class="form-control form-control-sm"
                                                    value="1" min="0">
                                         </div>
-                                        <div class="col-3">
+                                        <div class="col-2">
                                             <input type="text" name="p_pris" class="form-control form-control-sm"
-                                                   placeholder="Pris">
+                                                   placeholder="Salgspris">
+                                        </div>
+                                        <div class="col-2">
+                                            <input type="text" name="p_kostpris" class="form-control form-control-sm"
+                                                   placeholder="Kostpris" style="background:#fffbeb;"
+                                                   title="Intern kostpris — vises ikke på kundetilbud">
                                         </div>
                                     </div>
                                     <input type="text" name="p_beskrivelse" class="form-control form-control-sm desc-input"
@@ -310,11 +321,16 @@
                         </div>
                         <div class="produkt-valglist"></div>
                     </div>
-                    <div class="col-2">
+                    <div class="col-1">
                         <input type="number" name="p_antal" class="form-control form-control-sm" value="1" min="0">
                     </div>
-                    <div class="col-3">
-                        <input type="text" name="p_pris" class="form-control form-control-sm" placeholder="Pris">
+                    <div class="col-2">
+                        <input type="text" name="p_pris" class="form-control form-control-sm" placeholder="Salgspris">
+                    </div>
+                    <div class="col-2">
+                        <input type="text" name="p_kostpris" class="form-control form-control-sm"
+                               placeholder="Kostpris" style="background:#fffbeb;"
+                               title="Intern kostpris — vises ikke på kundetilbud">
                     </div>
                 </div>
                 <input type="text" name="p_beskrivelse" class="form-control form-control-sm desc-input"
@@ -341,12 +357,14 @@
         } else {
             const valuta = aktivValuta();
             liste.innerHTML = filtreret.map(p => {
-                const prisDkk = parseFloat(p.pris) || 0;
-                const prisVal = dkkTilValuta(prisDkk, valuta);
-                const prisVis = prisDkk > 0 ? `<span class="produkt-valg-pris">${fmtPris(prisVal)} ${valuta}</span>` : '';
+                const prisDkk    = parseFloat(p.pris) || 0;
+                const kostprisDkk = parseFloat(p.kostpris) || 0;
+                const prisVal    = dkkTilValuta(prisDkk, valuta);
+                const prisVis    = prisDkk > 0 ? `<span class="produkt-valg-pris">${fmtPris(prisVal)} ${valuta}</span>` : '';
                 return `<div class="produkt-valg-item"
                              data-navn="${p.navn.replace(/"/g, '&quot;')}"
                              data-pris="${prisDkk}"
+                             data-kostpris="${kostprisDkk}"
                              onmousedown="valgProdukt(this)">
                             <span class="fw-bold">${p.navn}</span>${prisVis}</div>`;
             }).join('');
@@ -359,11 +377,20 @@
         const wrapper  = item.closest('.position-relative');
         const lineItem = wrapper.closest('.line-item');
         wrapper.querySelector('[name="p_navn"]').value = item.dataset.navn;
-        const prisDkk = parseFloat(item.dataset.pris);
+        const prisDkk     = parseFloat(item.dataset.pris);
+        const kostprisDkk = parseFloat(item.dataset.kostpris);
         if (prisDkk > 0) {
             const prisInput = lineItem.querySelector('[name="p_pris"]');
-            prisInput.dataset.dkk = prisDkk;  // husk DKK-prisen til evt. valuta-skift
+            prisInput.dataset.dkk = prisDkk;
             prisInput.value = fmtPris(dkkTilValuta(prisDkk, aktivValuta()));
+        }
+        // Kostpris er altid i DKK — gem direkte (ingen konvertering)
+        if (kostprisDkk > 0) {
+            const kostInput = lineItem.querySelector('[name="p_kostpris"]');
+            if (kostInput) {
+                kostInput.dataset.dkk = kostprisDkk;
+                kostInput.value = fmtPris(kostprisDkk);
+            }
         }
         wrapper.querySelector('.produkt-valglist').style.display = 'none';
     }

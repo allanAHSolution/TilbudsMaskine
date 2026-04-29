@@ -139,11 +139,11 @@
                     <div class="kpi-label">Omkostninger</div>
                     <div class="kpi-value">{{ "{:,.0f}".format(total_omk_dkk) }}</div>
                     <div class="kpi-sub">
-                        DKK ·
-                        {% if dinero_omk %}{{ dinero_omk|length }} Dinero{% endif %}
-                        {% if dinero_omk and t.projekt.omkostninger %} + {% endif %}
-                        {% if t.projekt.omkostninger %}{{ t.projekt.omkostninger|length }} manuelle{% endif %}
-                        {% if not dinero_omk and not t.projekt.omkostninger %}0 poster{% endif %}
+                        DKK
+                        {% if omk_budget_dkk > 0 %}
+                        · af budget {{ "{:,.0f}".format(omk_budget_dkk) }}
+                        ({{ ((total_omk_dkk / omk_budget_dkk * 100)|round|int) }}%)
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -280,12 +280,29 @@
                     </div>
                     {% endif %}
 
-                    <!-- Produktlinjer fra tilbud -->
-                    <div class="section-label mt-3 mb-2">Produktlinjer (tilbud)</div>
+                    <!-- Produktlinjer fra tilbud (med kostpris-budget) -->
+                    <div class="d-flex justify-content-between align-items-center mt-3 mb-2">
+                        <div class="section-label mb-0">Produktlinjer (tilbud)</div>
+                        {% if omk_budget_dkk > 0 %}
+                        <span class="small fw-bold" style="color:#b45309;">
+                            Estimeret forbrug: {{ "{:,.0f}".format(omk_budget_dkk) }} DKK
+                        </span>
+                        {% endif %}
+                    </div>
                     {% for p in t.produkter|default([]) %}
-                    <div class="d-flex justify-content-between py-1" style="border-bottom:1px solid #f1f5f9; font-size:0.78rem;">
-                        <span>{{ p.navn }} × {{ p.antal }}</span>
-                        <span class="fw-bold">{{ "{:,.0f}".format(p.antal|float * p.pris|float) }} {{ t.valuta }}</span>
+                    {% set linje_salg = p.antal|float * p.pris|float %}
+                    {% set linje_kost = p.antal|float * (p.kostpris|float if p.kostpris is defined else 0) %}
+                    <div class="py-1" style="border-bottom:1px solid #f1f5f9; font-size:0.78rem;">
+                        <div class="d-flex justify-content-between">
+                            <span>{{ p.navn }} × {{ p.antal }}</span>
+                            <span class="fw-bold">{{ "{:,.0f}".format(linje_salg) }} {{ t.valuta }}</span>
+                        </div>
+                        {% if linje_kost > 0 %}
+                        <div class="d-flex justify-content-between" style="font-size:0.7rem; color:var(--text-muted);">
+                            <span>↳ Estimeret kostpris</span>
+                            <span style="color:#b45309;">{{ "{:,.0f}".format(linje_kost) }} DKK</span>
+                        </div>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>

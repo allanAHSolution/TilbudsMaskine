@@ -163,8 +163,12 @@
                     <input type="text" name="navn" class="form-control form-control-sm" placeholder="f.eks. Olieudskiller NS6" required>
                 </div>
                 <div style="flex:2; min-width:80px;">
-                    <label class="form-label-xs">Standardpris (DKK)</label>
+                    <label class="form-label-xs">Salgspris (DKK)</label>
                     <input type="number" step="0.01" name="pris" class="form-control form-control-sm" placeholder="0" required>
+                </div>
+                <div style="flex:2; min-width:80px;">
+                    <label class="form-label-xs">Kostpris (DKK)</label>
+                    <input type="number" step="0.01" name="kostpris" class="form-control form-control-sm" placeholder="0">
                 </div>
                 <div style="flex:2; min-width:60px;">
                     <label class="form-label-xs">Enhed</label>
@@ -189,7 +193,8 @@
         {% if produkter %}
         <div class="header-row">
             <div style="flex:5;">Navn</div>
-            <div style="flex:2;">Pris (DKK)</div>
+            <div style="flex:2;">Salgspris (DKK)</div>
+            <div style="flex:2;">Kostpris (DKK)</div>
             <div style="flex:1.5;">Enhed</div>
             <div style="flex:3;">Leverandør</div>
             <div style="flex:2;"></div>
@@ -204,6 +209,10 @@
                 </div>
                 <div style="flex:2; min-width:70px;">
                     <input type="number" step="0.01" name="pris" value="{{ p.pris }}" class="form-control form-control-sm">
+                </div>
+                <div style="flex:2; min-width:70px;">
+                    <input type="number" step="0.01" name="kostpris" value="{{ p.get('kostpris', '') }}"
+                           class="form-control form-control-sm" placeholder="0">
                 </div>
                 <div style="flex:1.5; min-width:55px;">
                     <input type="text" name="enhed" value="{{ p.enhed if p.enhed else '' }}"

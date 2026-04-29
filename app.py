@@ -837,17 +837,23 @@ def manage_products():
     indstillinger = load_data(INDSTILLINGER_FILE, {"kurser": {"NOK": 0.63, "EUR": 7.46, "SEK": 0.67, "USD": 6.85}})
     kurser = indstillinger.get("kurser", {"NOK": 0.63, "EUR": 7.46, "SEK": 0.67, "USD": 6.85})
 
+    def _safe_float(s, default=0.0):
+        try:
+            return float(s) if s not in (None, '') else default
+        except (ValueError, TypeError):
+            return default
+
     if request.method == 'POST':
         action = request.form.get('action')
         # Kostpris kan indtastes i hvilken som helst valuta — konverter til DKK
-        kostpris_orig   = float(request.form.get('kostpris_input', 0) or 0)
+        kostpris_orig   = _safe_float(request.form.get('kostpris_input'))
         kostpris_valuta = request.form.get('kostpris_valuta', 'DKK') or 'DKK'
         kostpris_dkk    = til_dkk(kostpris_orig, kostpris_valuta, kurser)
 
         if action == 'add':
             products.append({
                 "navn": request.form.get('navn'),
-                "pris": float(request.form.get('pris', 0)),
+                "pris": _safe_float(request.form.get('pris')),
                 "kostpris":        kostpris_dkk,
                 "kostpris_orig":   kostpris_orig,
                 "kostpris_valuta": kostpris_valuta,
@@ -861,7 +867,7 @@ def manage_products():
             index = int(request.form.get('index'))
             products[index] = {
                 "navn": request.form.get('navn'),
-                "pris": float(request.form.get('pris', 0)),
+                "pris": _safe_float(request.form.get('pris')),
                 "kostpris":        kostpris_dkk,
                 "kostpris_orig":   kostpris_orig,
                 "kostpris_valuta": kostpris_valuta,

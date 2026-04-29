@@ -109,7 +109,9 @@ def beregn_statistik_opdelt(all_data, malte_data, unox_data, kurser, aar,
     result = {m: {"produkter": 0.0, "timer": 0.0, "kommission": 0.0} for m in MAANEDER}
     kendte_dinero_guids = set()
 
-    # ── Lokale fakturaer på vundne tilbud (også fra tidligere års tilbud!) ──
+    # ── Lokale fakturaer på vundne tilbud ──
+    # Tæl kun reelt-bogført omsætning: kladder i Dinero er ikke omsætning endnu
+    BOOKED_STATUSES = {'Booked', 'Paid', 'booked', 'paid', ''}
     for t in all_data.values():
         if t.get('slettet'):
             continue
@@ -122,12 +124,17 @@ def beregn_statistik_opdelt(all_data, malte_data, unox_data, kurser, aar,
                 continue
             if dato.year != aar:
                 continue
+            # Husk dinero_guid for at undgå dobbelt-tælling (også for kladder)
+            if f.get('dinero_guid'):
+                kendte_dinero_guids.add(f['dinero_guid'])
+            # Spring kladder over (Dineros omsætningstal indeholder dem ikke)
+            din_status = f.get('dinero_status', '')
+            if f.get('dinero_guid') and din_status not in BOOKED_STATUSES:
+                continue
             beloeb_dkk = til_dkk(float(f.get('beloeb', 0)),
                                  f.get('valuta') or proj_valuta, kurser)
             kat = _kategoriser_faktura(f.get('beskrivelse', ''), kunde_navn)
             result[MAANEDER[dato.month - 1]][kat] += beloeb_dkk
-            if f.get('dinero_guid'):
-                kendte_dinero_guids.add(f['dinero_guid'])
 
     # ── Dinero-only fakturaer (oprettet direkte i Dinero, ikke via ERP) ──
     if dinero_invs_alle:

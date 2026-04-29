@@ -202,47 +202,77 @@
 
         <!-- Produktliste -->
         {% if produkter %}
+
+        <!-- Søg + filtrer + sortering -->
+        <div class="d-flex gap-2 align-items-center mb-3 flex-wrap">
+            <div class="input-group input-group-sm" style="max-width:320px;">
+                <span class="input-group-text"><i class="fa fa-search"></i></span>
+                <input type="search" id="produkt-soeg" class="form-control" placeholder="Søg produkt eller leverandør…">
+            </div>
+            <select id="filter-leverandoer" class="form-select form-select-sm" style="max-width:200px;">
+                <option value="">Alle leverandører</option>
+                {% for lev in leverandoerer %}
+                <option value="{{ lev.navn }}">{{ lev.navn }}</option>
+                {% endfor %}
+            </select>
+            <select id="sortering" class="form-select form-select-sm" style="max-width:200px;">
+                <option value="navn-asc">Navn (A-Z)</option>
+                <option value="navn-desc">Navn (Z-A)</option>
+                <option value="pris-desc">Salgspris (høj-lav)</option>
+                <option value="pris-asc">Salgspris (lav-høj)</option>
+                <option value="kostpris-desc">Kostpris (høj-lav)</option>
+                <option value="kostpris-asc">Kostpris (lav-høj)</option>
+                <option value="leverandoer-asc">Leverandør</option>
+            </select>
+            <span class="small text-muted ms-auto" id="produkt-tal">{{ produkter|length }} produkter</span>
+        </div>
+
         <div class="header-row">
-            <div style="flex:5;">Navn</div>
-            <div style="flex:2;">Salgspris (DKK)</div>
-            <div style="flex:4;">Kostpris</div>
-            <div style="flex:1.5;">Enhed</div>
-            <div style="flex:3;">Leverandør</div>
-            <div style="flex:2;"></div>
+            <div style="flex:1; min-width:180px;">Navn</div>
+            <div style="flex:0 0 110px;">Salgspris (DKK)</div>
+            <div style="flex:0 0 290px;">Kostpris</div>
+            <div style="flex:0 0 70px;">Enhed</div>
+            <div style="flex:0 0 150px;">Leverandør</div>
+            <div style="flex:0 0 130px;"></div>
         </div>
 
         {% for p in produkter %}
-        <div class="data-row">
-            <form method="POST" action="/admin/produkter">
+        <div class="data-row produkt-rk"
+             data-navn="{{ p.navn|lower }}"
+             data-leverandoer="{{ p.get('leverandoer','') }}"
+             data-pris="{{ p.pris|float }}"
+             data-kostpris="{{ p.get('kostpris', 0)|float }}">
+            <form method="POST" action="/admin/produkter" style="display:flex; gap:8px; align-items:center; flex-wrap:nowrap;">
                 <input type="hidden" name="index" value="{{ loop.index0 }}">
-                <div style="flex:5; min-width:120px;">
+                <div style="flex:1; min-width:180px;">
                     <input type="text" name="navn" value="{{ p.navn }}" class="form-control form-control-sm">
                 </div>
-                <div style="flex:2; min-width:70px;">
+                <div style="flex:0 0 110px;">
                     <input type="number" step="0.01" name="pris" value="{{ p.pris }}" class="form-control form-control-sm">
                 </div>
-                <div style="flex:4; min-width:230px;">
+                <div style="flex:0 0 290px;">
                     <div class="d-flex gap-1 align-items-center">
                         <input type="number" step="0.01" name="kostpris_input"
                                value="{{ p.get('kostpris_orig', p.get('kostpris', '')) }}"
-                               class="form-control form-control-sm kostpris-input" placeholder="0">
-                        <select name="kostpris_valuta" class="form-select form-select-sm kostpris-valuta" style="min-width:80px; flex:0 0 80px;">
+                               class="form-control form-control-sm kostpris-input"
+                               style="min-width:90px;" placeholder="0">
+                        <select name="kostpris_valuta" class="form-select form-select-sm kostpris-valuta" style="min-width:75px; flex:0 0 75px;">
                             <option value="DKK" {{ 'selected' if (p.get('kostpris_valuta') or 'DKK') == 'DKK' }}>DKK</option>
                             <option value="USD" {{ 'selected' if p.get('kostpris_valuta') == 'USD' }}>USD</option>
                             <option value="EUR" {{ 'selected' if p.get('kostpris_valuta') == 'EUR' }}>EUR</option>
                             <option value="NOK" {{ 'selected' if p.get('kostpris_valuta') == 'NOK' }}>NOK</option>
                             <option value="SEK" {{ 'selected' if p.get('kostpris_valuta') == 'SEK' }}>SEK</option>
                         </select>
-                        <span class="kostpris-dkk small text-muted" style="white-space:nowrap; min-width:80px; font-size:0.7rem;">
+                        <span class="kostpris-dkk small text-muted" style="white-space:nowrap; min-width:90px; font-size:0.72rem; text-align:right;">
                             = {{ "{:,.0f}".format(p.get('kostpris', 0)|float) }} DKK
                         </span>
                     </div>
                 </div>
-                <div style="flex:1.5; min-width:55px;">
+                <div style="flex:0 0 70px;">
                     <input type="text" name="enhed" value="{{ p.enhed if p.enhed else '' }}"
                            class="form-control form-control-sm" placeholder="stk">
                 </div>
-                <div style="flex:3; min-width:100px;">
+                <div style="flex:0 0 150px;">
                     <select name="leverandoer" class="form-select form-select-sm">
                         <option value="">— Ingen —</option>
                         {% for lev in leverandoerer %}
@@ -253,7 +283,7 @@
                         {% endif %}
                     </select>
                 </div>
-                <div style="flex:2; display:flex; justify-content:flex-end; gap:6px;">
+                <div style="flex:0 0 130px; display:flex; justify-content:flex-end; gap:6px;">
                     <button type="submit" name="action" value="edit" class="btn btn-sm btn-primary">Gem</button>
                     <button type="submit" name="action" value="delete" class="btn btn-sm btn-outline-danger"
                             onclick="return confirm('Slet \'{{ p.navn }}\'?')">Slet</button>
@@ -512,6 +542,56 @@
     document.querySelectorAll('.kostpris-input').forEach(inp => {
         opdaterKostprisVisning(findWrapper(inp));
     });
+
+    // ── Søg + filter + sortering ──
+    const soegInput = document.getElementById('produkt-soeg');
+    const filterLev = document.getElementById('filter-leverandoer');
+    const sortSelect = document.getElementById('sortering');
+    const tellSpan  = document.getElementById('produkt-tal');
+    const totalProdukter = document.querySelectorAll('.produkt-rk').length;
+
+    function anvendFilter() {
+        if (!soegInput) return;
+        const q = (soegInput.value || '').toLowerCase().trim();
+        const lev = filterLev.value;
+        let synlige = 0;
+        document.querySelectorAll('.produkt-rk').forEach(rk => {
+            const navn = rk.dataset.navn || '';
+            const rkLev = rk.dataset.leverandoer || '';
+            const matchSog = !q || navn.includes(q) || rkLev.toLowerCase().includes(q);
+            const matchLev = !lev || rkLev === lev;
+            const skal = matchSog && matchLev;
+            rk.style.display = skal ? '' : 'none';
+            if (skal) synlige++;
+        });
+        if (tellSpan) {
+            tellSpan.textContent = (synlige === totalProdukter)
+                ? totalProdukter + ' produkter'
+                : synlige + ' af ' + totalProdukter + ' produkter';
+        }
+    }
+
+    function anvendSortering() {
+        if (!sortSelect) return;
+        const [felt, retning] = sortSelect.value.split('-');
+        const rkk = Array.from(document.querySelectorAll('.produkt-rk'));
+        rkk.sort((a, b) => {
+            let va, vb;
+            if (felt === 'navn')        { va = a.dataset.navn;        vb = b.dataset.navn; }
+            else if (felt === 'pris')     { va = parseFloat(a.dataset.pris) || 0; vb = parseFloat(b.dataset.pris) || 0; }
+            else if (felt === 'kostpris') { va = parseFloat(a.dataset.kostpris) || 0; vb = parseFloat(b.dataset.kostpris) || 0; }
+            else if (felt === 'leverandoer') { va = a.dataset.leverandoer || ''; vb = b.dataset.leverandoer || ''; }
+            else return 0;
+            const cmp = (va < vb) ? -1 : (va > vb) ? 1 : 0;
+            return retning === 'desc' ? -cmp : cmp;
+        });
+        const parent = rkk[0]?.parentElement;
+        if (parent) rkk.forEach(rk => parent.appendChild(rk));
+    }
+
+    if (soegInput)  soegInput.addEventListener('input', anvendFilter);
+    if (filterLev)  filterLev.addEventListener('change', anvendFilter);
+    if (sortSelect) sortSelect.addEventListener('change', anvendSortering);
 </script>
 </body>
 </html>

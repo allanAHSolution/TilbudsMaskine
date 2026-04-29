@@ -650,24 +650,25 @@ def generer_toldfaktura_pdf(tilbud, fragt_beloeb=0.0, fragt_valuta=None,
     sub_str   = f"{total_sum + fragt_beloeb:,.2f} {valuta}".replace(',', '_').replace('.', ',').replace('_', '.')
     total_str = f"{total:,.2f} {valuta}".replace(',', '_').replace('.', ',').replace('_', '.')
 
+    # Subtotal-række
     pdf.set_fill_color(*GREY_ROW); pdf.set_text_color(20, 20, 30)
+    pdf.cell(110, 7, '', fill=True)
     pdf.set_font('DejaVu', 'B', 9.5)
-    pdf.cell(135, 7, '', fill=True)
-    pdf.cell(20, 7, 'Subtotal', fill=True, align='R')
+    pdf.cell(35, 7, 'Subtotal', fill=True, align='R')
     pdf.set_font('DejaVu', '', 9.5)
-    pdf.cell(25, 7, sub_str + '  ', fill=True, align='R')
+    pdf.cell(35, 7, sub_str + '  ', fill=True, align='R')
     pdf.ln(7)
 
+    # Tom mellem-række (visuelt mellemrum i grå boks)
     pdf.set_fill_color(*GREY_ROW)
-    pdf.cell(135, 7, '', fill=True)
-    pdf.cell(20, 7, '', fill=True)
-    pdf.cell(25, 7, '', fill=True)
-    pdf.ln(7)
+    pdf.cell(180, 5, '', fill=True)
+    pdf.ln(5)
 
-    pdf.set_fill_color(*GREY_ROW); pdf.set_font('DejaVu', 'B', 10)
-    pdf.cell(135, 8, '', fill=True)
-    pdf.cell(20, 8, 'Total', fill=True, align='R')
-    pdf.cell(25, 8, total_str + '  ', fill=True, align='R')
+    # Total-række
+    pdf.set_fill_color(*GREY_ROW); pdf.set_font('DejaVu', 'B', 10.5)
+    pdf.cell(110, 8, '', fill=True)
+    pdf.cell(35, 8, 'Total', fill=True, align='R')
+    pdf.cell(35, 8, total_str + '  ', fill=True, align='R')
     pdf.ln(12)
 
     # ── Footer notes ──

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toldfaktura #{{ t.nummer }} | AhSolution ERP</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/font-awesome.min.css">
+    <style>
+        :root {
+            --accent: #1e325a;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+        body { background:#f4f7f9; color:var(--text-dark); font-family:'Inter',system-ui,sans-serif; padding-bottom:60px; }
+        .navbar { background:#fff; border-bottom:1px solid var(--border); padding:16px 0; }
+        .navbar-brand img { height:48px; }
+        .card { background:#fff; border:1px solid var(--border); border-radius:12px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.04); }
+        .form-label-xs { font-size:0.65rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); font-weight:700; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar sticky-top mb-4">
+    <div class="container d-flex justify-content-between align-items-center">
+        <a href="/" class="navbar-brand"><img src="/static/logo.png" alt="AhSolution"></a>
+        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:2px;color:var(--accent);font-weight:700;" class="d-none d-md-block">Toldfaktura</div>
+        <a href="/admin" class="btn btn-sm btn-outline-secondary"><i class="fa fa-arrow-left me-1"></i> Dashboard</a>
+    </div>
+</nav>
+
+<div class="container" style="max-width: 720px;">
+    <div class="card p-4">
+        <div class="fw-bold" style="color:var(--accent); font-size:1.2rem;">
+            Generer toldfaktura — #{{ t.nummer }}
+        </div>
+        <div class="small mb-4" style="color: var(--text-muted);">
+            {{ t.kunde }}{% if t.site %} · {{ t.site }}{% endif %} · DAP eksport DK → NO
+        </div>
+
+        <form method="POST" action="/toldfaktura/{{ id }}">
+            <div class="mb-3">
+                <label class="form-label-xs">Fragt-beløb (DAP-omkostning)</label>
+                <div class="input-group">
+                    <input type="number" step="0.01" name="fragt_beloeb" class="form-control"
+                           placeholder="0" required autofocus>
+                    <select name="fragt_valuta" class="form-select" style="max-width:90px;">
+                        <option value="DKK" {{ 'selected' if t.valuta == 'DKK' }}>DKK</option>
+                        <option value="NOK" {{ 'selected' if t.valuta == 'NOK' }}>NOK</option>
+                        <option value="EUR" {{ 'selected' if t.valuta == 'EUR' }}>EUR</option>
+                        <option value="SEK" {{ 'selected' if t.valuta == 'SEK' }}>SEK</option>
+                    </select>
+                </div>
+                <div class="small mt-1" style="color: var(--text-muted);">
+                    Vises som separat linje på fakturaen. Tilføjes til total handelsværdi.
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label-xs">Oprindelsesland</label>
+                <input type="text" name="oprindelsesland" value="Danmark" class="form-control">
+                <div class="small mt-1" style="color: var(--text-muted);">
+                    Land hvor varerne er fremstillet. Vises på toldfakturaen.
+                </div>
+            </div>
+
+            <div class="alert" style="background:#f0f9ff; border:1px solid #bae6fd; color:#0c4a6e; font-size:0.85rem;">
+                <i class="fa fa-info-circle me-1"></i>
+                <strong>Toldfakturaen indeholder:</strong> afsender (AhSolution CVR), modtager,
+                produktlinjer fra tilbuddet, fragt som separat linje, total handelsværdi, Incoterm DAP,
+                eksport-deklaration og signaturfelt.
+            </div>
+
+            <div class="d-flex justify-content-between mt-4">
+                <a href="/admin" class="btn btn-outline-secondary">Annuller</a>
+                <button type="submit" class="btn btn-primary fw-bold px-4" style="background:var(--accent);">
+                    <i class="fa fa-file-pdf-o me-1"></i> Download Toldfaktura PDF
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>

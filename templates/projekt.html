@@ -103,7 +103,10 @@
                         {% if t.projekt and t.projekt.oprettet %} · Projekt oprettet {{ t.projekt.oprettet }}{% endif %}
                     </div>
                 </div>
-                <div class="col-auto">
+                <div class="col-auto d-flex gap-2">
+                    <a href="/toldfaktura/{{ id }}" class="btn btn-sm fw-bold" style="background:rgba(255,255,255,0.2); color:white; border:1px solid rgba(255,255,255,0.4);">
+                        <i class="fa fa-file-pdf-o me-1"></i> Toldfaktura
+                    </a>
                     <a href="/nyt-tilbud?rediger={{ id }}" class="btn btn-sm fw-bold" style="background:rgba(255,255,255,0.2); color:white; border:1px solid rgba(255,255,255,0.4);">
                         <i class="fa fa-pencil me-1"></i> Ret tilbud
                     </a>

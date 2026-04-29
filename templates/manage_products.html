@@ -181,7 +181,12 @@
                         <span class="kostpris-dkk small text-muted" style="white-space:nowrap; min-width:80px; font-size:0.7rem;" data-target-add>= 0 DKK</span>
                     </div>
                 </div>
-                <div style="flex:2; min-width:60px;">
+                <div style="flex:2; min-width:100px;">
+                    <label class="form-label-xs">HS-kode</label>
+                    <input type="text" name="hs_kode" class="form-control form-control-sm"
+                           placeholder="Auto" title="Toldtarifnummer — kan auto-foreslås">
+                </div>
+                <div style="flex:1; min-width:60px;">
                     <label class="form-label-xs">Enhed</label>
                     <input type="text" name="enhed" class="form-control form-control-sm" placeholder="stk">
                 </div>
@@ -225,14 +230,21 @@
                 <option value="leverandoer-asc">Leverandør</option>
             </select>
             <span class="small text-muted ms-auto" id="produkt-tal">{{ produkter|length }} produkter</span>
+            <form method="POST" action="/admin/produkter" style="display:inline;">
+                <input type="hidden" name="action" value="foreslå_hs">
+                <button type="submit" class="btn btn-sm btn-outline-info" title="Auto-udfyld tomme HS-koder ud fra produktnavn">
+                    <i class="fa fa-magic me-1"></i> Foreslå HS-koder
+                </button>
+            </form>
         </div>
 
         <div class="header-row">
             <div style="flex:1; min-width:180px;">Navn</div>
             <div style="flex:0 0 110px;">Salgspris (DKK)</div>
             <div style="flex:0 0 290px;">Kostpris</div>
+            <div style="flex:0 0 100px;">HS-kode</div>
             <div style="flex:0 0 70px;">Enhed</div>
-            <div style="flex:0 0 150px;">Leverandør</div>
+            <div style="flex:0 0 130px;">Leverandør</div>
             <div style="flex:0 0 130px;"></div>
         </div>
 
@@ -268,11 +280,16 @@
                         </span>
                     </div>
                 </div>
+                <div style="flex:0 0 100px;">
+                    <input type="text" name="hs_kode" value="{{ p.get('hs_kode', '') }}"
+                           class="form-control form-control-sm" placeholder="Auto"
+                           title="Toldtarifnummer — auto-foreslås hvis tom">
+                </div>
                 <div style="flex:0 0 70px;">
                     <input type="text" name="enhed" value="{{ p.enhed if p.enhed else '' }}"
                            class="form-control form-control-sm" placeholder="stk">
                 </div>
-                <div style="flex:0 0 150px;">
+                <div style="flex:0 0 130px;">
                     <select name="leverandoer" class="form-select form-select-sm">
                         <option value="">— Ingen —</option>
                         {% for lev in leverandoerer %}

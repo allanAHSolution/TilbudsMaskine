@@ -107,6 +107,60 @@ def _f(s, default=0.0):
         return default
 
 
+def gæt_hs_kode(navn):
+    """
+    Foreslår en HS-kode (TARIC) baseret på produktnavn.
+    Domænespecifik for vandrensning/spildevand. Returnerer tom streng
+    hvis ingen match (typisk service/konsulent).
+    """
+    n = (navn or '').lower()
+
+    # Service-poster (ingen HS)
+    if any(k in n for k in ['konsulent', 'timer', 'rådgiv', 'sat ', 'site acceptance',
+                             'remote', 'fjernadgang', 'systemintegration', 'idriftsætt',
+                             'idriftsät', 'opstart', 'pris i alt', 'total', 'fragt']):
+        return ''
+
+    # Pumper
+    if 'doseringspumpe' in n: return '8413.50.20'
+    if 'feed pump' in n or 'feedpump' in n: return '8413.81.00'
+    if 'sump pump' in n or 'sumppump' in n or 'dykpumpe' in n: return '8413.70.21'
+    if 'pumpe' in n: return '8413.70.21'
+
+    # Filtrering / udskillere
+    if 'olieudskill' in n or 'fedtudskill' in n or 'tungmetal' in n: return '8421.21.99'
+    if 'filter' in n: return '8421.29.00'
+
+    # Beholdere / tanke
+    if 'kombitank' in n or 'buffertank' in n or 'plasttank' in n: return '7309.00.30'
+    if 'tank' in n: return '7309.00.30'
+
+    # Brønde / karme (typisk beton eller stål)
+    if 'sandfang' in n: return '6810.91.00'
+    if 'pumpebrønd' in n: return '7308.90.99'
+    if 'prøvetagning' in n or 'brønd' in n: return '7308.90.99'
+    if 'karm' in n or 'dæksel' in n: return '7308.90.99'
+
+    # Sensorer / måling
+    if 'radar' in n and ('sensor' in n or 'level' in n or 'niveau' in n): return '9026.10.81'
+    if 'level sensor' in n or 'levelsensor' in n: return '9026.10.81'
+    if 'højvand' in n or 'niveau' in n: return '9026.20.50'
+    if 'flow' in n and 'meter' in n: return '9028.20.00'
+
+    # Styring / alarmer
+    if 'plc' in n or 'hmi' in n: return '8537.10.99'
+    if 'alarm' in n: return '8531.10.95'
+
+    # Fittings / rør
+    if 'fitting' in n or 'rørdele' in n: return '7307.99.80'
+    if 'rør' in n: return '7304.90.00'
+
+    # Vogne / transportudstyr
+    if 'hjulvogn' in n or 'vogn' in n: return '8716.80.00'
+
+    return ''
+
+
 def _kategoriser_faktura(beskrivelse, kunde):
     """Klassificér en faktura som produkter / timer / kommission baseret
     på tekst. Bruges til opdelt omsætningsgraf."""
@@ -500,6 +554,10 @@ def generer_toldfaktura_pdf(tilbud, fragt_beloeb=0.0, fragt_valuta=None,
     pdf.cell(25, 7, 'Total',  fill=True, align='R')
     pdf.ln(7)
 
+    # Stamdata-lookup for at finde HS-koder for produkter der ikke har dem på linjen
+    stamdata_hs = {p['navn'].lower().strip(): (p.get('hs_kode') or '').strip()
+                    for p in load_data(PRODUKTER_FILE, [])}
+
     total_sum = 0
     for i, p in enumerate(tilbud.get('produkter', [])):
         antal = _f(p.get('antal', 1), 1)
@@ -509,9 +567,15 @@ def generer_toldfaktura_pdf(tilbud, fragt_beloeb=0.0, fragt_valuta=None,
         fill = (i % 2 == 0); bg = GREY_ROW if fill else (255, 255, 255)
         pdf.set_fill_color(*bg); pdf.set_text_color(30, 30, 30)
         pdf.set_font('DejaVu', '', 8.5)
+        # HS-kode: linje først, ellers stamdata-opslag, ellers gæt fra navn
+        hs_kode = (p.get('hs_kode') or '').strip()
+        if not hs_kode:
+            hs_kode = stamdata_hs.get(p.get('navn', '').lower().strip(), '')
+        if not hs_kode:
+            hs_kode = gæt_hs_kode(p.get('navn', ''))
         pdf.cell(8, 6, str(i+1), fill=fill, align='C')
         pdf.cell(72, 6, safe_text(p.get('navn', ''))[:42], fill=fill)
-        pdf.cell(20, 6, safe_text(p.get('hs_kode', '')), fill=fill, align='C')
+        pdf.cell(20, 6, safe_text(hs_kode), fill=fill, align='C')
         pdf.cell(18, 6, safe_text(p.get('origin', oprindelsesland[:2].upper())), fill=fill, align='C')
         antal_str = str(int(antal)) if antal == int(antal) else str(antal)
         pdf.cell(15, 6, antal_str, fill=fill, align='C')
@@ -1073,13 +1137,14 @@ def manage_products():
 
         if action == 'add':
             products.append({
-                "navn": request.form.get('navn'),
-                "pris": _safe_float(request.form.get('pris')),
+                "navn":            request.form.get('navn'),
+                "pris":            _safe_float(request.form.get('pris')),
                 "kostpris":        kostpris_dkk,
                 "kostpris_orig":   kostpris_orig,
                 "kostpris_valuta": kostpris_valuta,
-                "enhed": request.form.get('enhed', ''),
-                "leverandoer": request.form.get('leverandoer', '')
+                "hs_kode":         (request.form.get('hs_kode') or '').strip(),
+                "enhed":           request.form.get('enhed', ''),
+                "leverandoer":     request.form.get('leverandoer', '')
             })
         elif action == 'delete':
             index = int(request.form.get('index'))
@@ -1087,14 +1152,22 @@ def manage_products():
         elif action == 'edit':
             index = int(request.form.get('index'))
             products[index] = {
-                "navn": request.form.get('navn'),
-                "pris": _safe_float(request.form.get('pris')),
+                "navn":            request.form.get('navn'),
+                "pris":            _safe_float(request.form.get('pris')),
                 "kostpris":        kostpris_dkk,
                 "kostpris_orig":   kostpris_orig,
                 "kostpris_valuta": kostpris_valuta,
-                "enhed": request.form.get('enhed', ''),
-                "leverandoer": request.form.get('leverandoer', '')
+                "hs_kode":         (request.form.get('hs_kode') or '').strip(),
+                "enhed":           request.form.get('enhed', ''),
+                "leverandoer":     request.form.get('leverandoer', '')
             }
+        elif action == 'foreslå_hs':
+            # Fyld tomme HS-koder ud baseret på produktnavn
+            for p in products:
+                if not (p.get('hs_kode') or '').strip():
+                    forslag = gæt_hs_kode(p.get('navn', ''))
+                    if forslag:
+                        p['hs_kode'] = forslag
         save_data(PRODUKTER_FILE, products)
         return redirect(url_for('manage_products'))
 

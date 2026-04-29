@@ -82,6 +82,31 @@ def til_dkk(beloeb, valuta, kurser):
     return beloeb * kurser.get(valuta, 1.0)
 
 
+def _f(s, default=0.0):
+    """Sikker float-konvertering — håndterer None, '', og dansk talformat."""
+    if s is None or s == '':
+        return default
+    try:
+        if isinstance(s, (int, float)):
+            return float(s)
+        s = str(s).strip()
+        if not s:
+            return default
+        # Dansk format: 1.234,56 → 1234.56 (period=thousand, comma=decimal)
+        if ',' in s and '.' in s:
+            s = s.replace('.', '').replace(',', '.')
+        elif ',' in s:
+            s = s.replace(',', '.')
+        elif '.' in s:
+            # Heuristik: hvis præcis 3 cifre efter eneste punktum og kun cifre før → thousand-sep
+            parts = s.split('.')
+            if len(parts) == 2 and len(parts[1]) == 3 and parts[0].lstrip('-').isdigit():
+                s = s.replace('.', '')
+        return float(s)
+    except (ValueError, TypeError):
+        return default
+
+
 def _kategoriser_faktura(beskrivelse, kunde):
     """Klassificér en faktura som produkter / timer / kommission baseret
     på tekst. Bruges til opdelt omsætningsgraf."""
@@ -131,7 +156,7 @@ def beregn_statistik_opdelt(all_data, malte_data, unox_data, kurser, aar,
             din_status = f.get('dinero_status', '')
             if f.get('dinero_guid') and din_status not in BOOKED_STATUSES:
                 continue
-            beloeb_dkk = til_dkk(float(f.get('beloeb', 0)),
+            beloeb_dkk = til_dkk(_f(f.get('beloeb')),
                                  f.get('valuta') or proj_valuta, kurser)
             kat = _kategoriser_faktura(f.get('beskrivelse', ''), kunde_navn)
             result[MAANEDER[dato.month - 1]][kat] += beloeb_dkk
@@ -147,7 +172,7 @@ def beregn_statistik_opdelt(all_data, malte_data, unox_data, kurser, aar,
                 continue
             if dato.year != aar:
                 continue
-            beloeb_dkk = til_dkk(float(i.get('total_incl_vat', 0)),
+            beloeb_dkk = til_dkk(_f(i.get('total_incl_vat')),
                                  i.get('currency', 'DKK'), kurser)
             kat = _kategoriser_faktura(i.get('description', ''), i.get('contact_name', ''))
             result[MAANEDER[dato.month - 1]][kat] += beloeb_dkk
@@ -245,8 +270,8 @@ def generer_pdf(tilbud, doc_type="tilbud"):
     total_sum = 0
     for i, p in enumerate(tilbud.get('produkter', [])):
         try:
-            antal = float(p.get('antal', 1))
-            pris = float(p.get('pris', 0))
+            antal = _f(p.get('antal', 1), 1)
+            pris = _f(p.get('pris', 0))
             linje_total = antal * pris
         except Exception:
             antal, pris, linje_total = 1, 0, 0
@@ -437,7 +462,7 @@ def dinero_sync():
                         dato_iso = datetime.strptime(f.get('dato',''), '%d-%m-%Y').strftime('%Y-%m-%d')
                     except ValueError:
                         dato_iso = datetime.now().strftime('%Y-%m-%d')
-                    linjer = [{"beskrivelse": beskrivelse, "antal": 1, "enhedspris": float(f.get('beloeb', 0))}]
+                    linjer = [{"beskrivelse": beskrivelse, "antal": 1, "enhedspris": _f(f.get('beloeb'))}]
                     site_str = f" · {t.get('site').strip()}" if t.get('site') else ''
                     titel    = f"#{t.get('nummer')} {t.get('kunde','')}{site_str} — {beskrivelse}"
                     komment  = f"{titel}\n\nJf. vores ordrebekræftelse nr. {t.get('nummer')}"
@@ -729,12 +754,12 @@ def admin_panel():
 
     # Summariske tal til stat-kort
     afventer_total = sum(
-        sum(float(p.get('antal', 1)) * float(p.get('pris', 0)) for p in t.get('produkter', []))
+        sum(_f(p.get('antal', 1), 1) * _f(p.get('pris', 0)) for p in t.get('produkter', []))
         for t in afventer.values()
     )
     vundne_ufaktureret = sum(
-        max(0, sum(float(p.get('antal', 1)) * float(p.get('pris', 0)) for p in t.get('produkter', []))
-               - sum(float(f.get('beloeb', 0)) for f in t.get('fakturaer', [])))
+        max(0, sum(_f(p.get('antal', 1), 1) * _f(p.get('pris', 0)) for p in t.get('produkter', []))
+               - sum(_f(f.get('beloeb')) for f in t.get('fakturaer', [])))
         for t in vundne.values()
     )
     faktureringsopgaver = _beregn_faktureringsopgaver(idag)
@@ -758,7 +783,7 @@ def admin_panel():
                     continue
                 kode = i.get('project_code') or _match_paa_navn(i.get('description', ''), pmap)
                 if kode and kode.startswith('PROJ-'):
-                    beloeb_dkk = til_dkk(float(i.get('total_incl_vat', 0)), i.get('currency', 'DKK'), kurser)
+                    beloeb_dkk = til_dkk(_f(i.get('total_incl_vat')), i.get('currency', 'DKK'), kurser)
                     dinero_salg_per_proj[kode] = dinero_salg_per_proj.get(kode, 0) + beloeb_dkk
                     dinero_salg_list_per_proj.setdefault(kode, []).append(i)
             # Købsbilag (omkostninger)
@@ -789,11 +814,11 @@ def admin_panel():
             proj_code = f"PROJ-{t.get('nummer', 0):03d}"
             pval      = t.get('valuta', 'DKK')
             # Budget + lokale fakturaer er i projekt-valuta → konverter til DKK
-            grp_total += til_dkk(sum(float(p.get('antal',1))*float(p.get('pris',0)) for p in t.get('produkter',[])), pval, kurser)
+            grp_total += til_dkk(sum(_f(p.get('antal',1), 1)*_f(p.get('pris',0)) for p in t.get('produkter',[])), pval, kurser)
             # Hver faktura kan have sin egen valuta (fx DKK-faktura på NOK-projekt)
             for f in t.get('fakturaer', []):
-                grp_fakt += til_dkk(float(f.get('beloeb',0)), f.get('valuta') or pval, kurser)
-            grp_udg   += til_dkk(sum(float(o.get('beloeb',0)) for o in t.get('projekt',{}).get('omkostninger',[])), pval, kurser)
+                grp_fakt += til_dkk(_f(f.get('beloeb')), f.get('valuta') or pval, kurser)
+            grp_udg   += til_dkk(sum(_f(o.get('beloeb')) for o in t.get('projekt',{}).get('omkostninger',[])), pval, kurser)
             # Dinero-salg og -køb er allerede i DKK (eller egen valuta for salg)
             grp_fakt  += dinero_salg_per_proj.get(proj_code, 0)  # antaget DKK (TODO: konverter salg-valuta)
             grp_udg   += dinero_omk_per_proj.get(proj_code, 0)   # DKK
@@ -1063,7 +1088,7 @@ def genaktiver_tilbud(tilbud_id):
 def _projekt_budget(tilbud):
     """Beregn samlet tilbudssum som budget."""
     return sum(
-        float(p.get('antal', 1)) * float(p.get('pris', 0))
+        _f(p.get('antal', 1), 1) * _f(p.get('pris', 0))
         for p in tilbud.get('produkter', [])
     )
 
@@ -1091,17 +1116,17 @@ def projekt_side(tilbud_id):
     budget_dkk     = til_dkk(budget, proj_valuta, kurser)
     # Kostpris-baseret budget (intern forbrugsestimat) — altid i DKK
     omk_budget_dkk = sum(
-        float(p.get('antal', 1)) * float(p.get('kostpris', 0) or 0)
+        _f(p.get('antal', 1), 1) * _f(p.get('kostpris'))
         for p in t.get('produkter', [])
     )
-    faktureret     = sum(float(f.get('beloeb', 0)) for f in t.get('fakturaer', []))
+    faktureret     = sum(_f(f.get('beloeb')) for f in t.get('fakturaer', []))
     # Pr-faktura valuta → summer DKK præcist
     faktureret_dkk = sum(
-        til_dkk(float(f.get('beloeb', 0)), f.get('valuta') or proj_valuta, kurser)
+        til_dkk(_f(f.get('beloeb')), f.get('valuta') or proj_valuta, kurser)
         for f in t.get('fakturaer', [])
     )
     omkostninger   = t['projekt'].get('omkostninger', [])
-    total_manuel   = sum(float(o.get('beloeb', 0)) for o in omkostninger)
+    total_manuel   = sum(_f(o.get('beloeb')) for o in omkostninger)
     total_manuel_dkk = til_dkk(total_manuel, proj_valuta, kurser)
 
     # Hent Dinero-syncede omkostninger + salgsfakturaer tagget til projektet
@@ -1138,7 +1163,7 @@ def projekt_side(tilbud_id):
 
     # Dinero-tal er altid i DKK (købsbilag) eller egen valuta (salgsfakturaer)
     total_dinero_dkk      = sum(e['amount'] for e in dinero_omk)  # Dinero entries = DKK
-    total_salg_dinero_dkk = sum(til_dkk(float(i.get('total_incl_vat', 0)),
+    total_salg_dinero_dkk = sum(til_dkk(_f(i.get('total_incl_vat')),
                                          i.get('currency', 'DKK'), kurser)
                                  for i in dinero_salg)
 
@@ -1287,8 +1312,8 @@ def _malte_oversigt(data):
                 'faktureret': k in data.get('provision_faktureret', {}),
                 'faktureret_dato': data.get('provision_faktureret', {}).get(k, ''),
             }
-        total = float(s.get('antal', 1)) * float(s.get('enhedspris', 0))
-        prov = total * float(s.get('provision_pct', 5)) / 100
+        total = _f(s.get('antal', 1), 1) * _f(s.get('enhedspris'))
+        prov = total * _f(s.get('provision_pct', 5), 5) / 100
         kvartaler[k]['salg'].append(s)
         kvartaler[k]['total_salg'] += total
         kvartaler[k]['total_provision'] += prov
@@ -1416,7 +1441,7 @@ def _beregn_faktureringsopgaver(idag):
                     continue
                 kode = i.get('project_code') or _match_paa_navn(i.get('description', ''), pmap)
                 if kode and kode.startswith('PROJ-'):
-                    bdkk = til_dkk(float(i.get('total_incl_vat', 0)), i.get('currency', 'DKK'), kurser_local)
+                    bdkk = til_dkk(_f(i.get('total_incl_vat')), i.get('currency', 'DKK'), kurser_local)
                     dinero_fakt_dkk[kode] = dinero_fakt_dkk.get(kode, 0) + bdkk
         except Exception:
             pass
@@ -1429,7 +1454,7 @@ def _beregn_faktureringsopgaver(idag):
         betaling = t.get('betaling', '5050')
 
         total = sum(
-            float(p.get('antal', 1)) * float(p.get('pris', 0))
+            _f(p.get('antal', 1), 1) * _f(p.get('pris', 0))
             for p in t.get('produkter', [])
         )
         if total <= 0:
@@ -1439,7 +1464,7 @@ def _beregn_faktureringsopgaver(idag):
 
         # Faktureret = lokale fakturaer (egen valuta pr stk) + Dinero-matchede (allerede DKK)
         faktureret_dkk = sum(
-            til_dkk(float(f.get('beloeb', 0)), f.get('valuta') or valuta, kurser_local)
+            til_dkk(_f(f.get('beloeb')), f.get('valuta') or valuta, kurser_local)
             for f in t.get('fakturaer', [])
         )
         proj_kode = f"PROJ-{t.get('nummer', 0):03d}"
@@ -1465,7 +1490,7 @@ def _beregn_faktureringsopgaver(idag):
         # Vis rater der endnu ikke er dækket af faktureret beløb (alt i DKK)
         # rate_beloeb til visning beregnes i original valuta så det ligner tilbuddet
         total_orig = sum(
-            float(p.get('antal', 1)) * float(p.get('pris', 0))
+            _f(p.get('antal', 1), 1) * _f(p.get('pris', 0))
             for p in t.get('produkter', [])
         )
         akkumuleret_dkk = 0.0

@@ -834,8 +834,10 @@ def manage_products():
 
     products = load_data(PRODUKTER_FILE, [])
     leverandoerer = load_data(LEVERANDOERER_FILE, [])
-    indstillinger = load_data(INDSTILLINGER_FILE, {"kurser": {"NOK": 0.63, "EUR": 7.46, "SEK": 0.67, "USD": 6.85}})
-    kurser = indstillinger.get("kurser", {"NOK": 0.63, "EUR": 7.46, "SEK": 0.67, "USD": 6.85})
+    indstillinger = load_data(INDSTILLINGER_FILE, {})
+    # Merge defaults så manglende kurser (fx USD) altid er tilstede
+    default_kurser = {"NOK": 0.63, "EUR": 7.46, "SEK": 0.67, "USD": 6.85}
+    kurser = {**default_kurser, **(indstillinger.get("kurser") or {})}
 
     def _safe_float(s, default=0.0):
         try:

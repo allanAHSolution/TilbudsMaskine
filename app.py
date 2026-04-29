@@ -288,8 +288,17 @@ def generer_pdf(tilbud, doc_type="tilbud"):
         pdf.cell(88, 6, safe_text(p.get('navn', ''))[:48], fill=fill)
         pdf.set_font('DejaVu', '', 9)
         pdf.cell(22, 6, antal_str, fill=fill, align='C')
-        pdf.cell(40, 6, f"{pris:,.0f} {valuta}", fill=fill, align='R')
-        pdf.cell(30, 6, f"{linje_total:,.0f}", fill=fill, align='R')
+        # Pris=0 vises som "Inkluderet" — linjen er en del af samlet tilbudspris
+        if pris == 0:
+            pdf.set_font('DejaVu', 'I', 9)
+            pdf.set_text_color(120, 120, 120)
+            pdf.cell(40, 6, 'Inkluderet', fill=fill, align='R')
+            pdf.cell(30, 6, '—', fill=fill, align='R')
+            pdf.set_text_color(30, 30, 30)
+            pdf.set_font('DejaVu', '', 9)
+        else:
+            pdf.cell(40, 6, f"{pris:,.0f} {valuta}", fill=fill, align='R')
+            pdf.cell(30, 6, f"{linje_total:,.0f}", fill=fill, align='R')
         pdf.ln(6)
 
         if p.get('beskrivelse'):

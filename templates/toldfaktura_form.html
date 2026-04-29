@@ -18,6 +18,8 @@
         .navbar-brand img { height:48px; }
         .card { background:#fff; border:1px solid var(--border); border-radius:12px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.04); }
         .form-label-xs { font-size:0.65rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); font-weight:700; }
+        .section-label { font-size:0.7rem; text-transform:uppercase; letter-spacing:1.5px; color:var(--accent); font-weight:700; margin-bottom:8px; }
+        .dinero-badge { background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:4px; font-size:0.65rem; font-weight:700; }
     </style>
 </head>
 <body>
@@ -30,7 +32,7 @@
     </div>
 </nav>
 
-<div class="container" style="max-width: 720px;">
+<div class="container" style="max-width: 920px;">
     <div class="card p-4">
         <div class="fw-bold" style="color:var(--accent); font-size:1.2rem;">
             Generer toldfaktura — #{{ t.nummer }}
@@ -40,36 +42,121 @@
         </div>
 
         <form method="POST" action="/toldfaktura/{{ id }}">
-            <div class="mb-3">
-                <label class="form-label-xs">Fragt-beløb (DAP-omkostning)</label>
-                <div class="input-group">
-                    <input type="number" step="0.01" name="fragt_beloeb" class="form-control"
-                           placeholder="0" required autofocus>
-                    <select name="fragt_valuta" class="form-select" style="max-width:90px;">
+
+            <!-- ── Faktura-nummer + dato + fragt ── -->
+            <div class="section-label">Faktura-information</div>
+            <div class="row g-2 mb-3">
+                <div class="col-md-3">
+                    <label class="form-label-xs">Faktura nr.</label>
+                    <input type="text" name="faktura_nr" class="form-control form-control-sm"
+                           value="{{ t.nummer }}" placeholder="Auto">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label-xs">Oprindelsesland</label>
+                    <input type="text" name="oprindelsesland" value="Danmark" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label-xs">Fragt (DAP)</label>
+                    <input type="number" step="0.01" name="fragt_beloeb" class="form-control form-control-sm"
+                           placeholder="0">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label-xs">Valuta</label>
+                    <select name="fragt_valuta" class="form-select form-select-sm">
                         <option value="DKK" {{ 'selected' if t.valuta == 'DKK' }}>DKK</option>
                         <option value="NOK" {{ 'selected' if t.valuta == 'NOK' }}>NOK</option>
                         <option value="EUR" {{ 'selected' if t.valuta == 'EUR' }}>EUR</option>
                         <option value="SEK" {{ 'selected' if t.valuta == 'SEK' }}>SEK</option>
                     </select>
                 </div>
-                <div class="small mt-1" style="color: var(--text-muted);">
-                    Vises som separat linje på fakturaen. Tilføjes til total handelsværdi.
+            </div>
+
+            <!-- ── Importør (auto-fyldt fra Dinero) ── -->
+            <div class="section-label mt-3">
+                Kunde / Importør
+                {% if importoer.vat_nr %}<span class="dinero-badge ms-2">FRA DINERO</span>{% endif %}
+            </div>
+            <div class="row g-2 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label-xs">Firmanavn</label>
+                    <input type="text" name="imp_navn" class="form-control form-control-sm"
+                           value="{{ importoer.navn or t.kunde }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label-xs">Adresse</label>
+                    <input type="text" name="imp_adresse" class="form-control form-control-sm"
+                           value="{{ importoer.adresse_linje or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label-xs">Postnr.</label>
+                    <input type="text" name="imp_postnr" class="form-control form-control-sm"
+                           value="{{ importoer.postnr or '' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label-xs">By</label>
+                    <input type="text" name="imp_by" class="form-control form-control-sm"
+                           value="{{ importoer.by or '' }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label-xs">Land</label>
+                    <input type="text" name="imp_land" class="form-control form-control-sm"
+                           value="{{ importoer.land_kode or 'NO' }}" maxlength="2">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label-xs">Org.nr / VAT</label>
+                    <input type="text" name="imp_vat" class="form-control form-control-sm"
+                           value="{{ importoer.vat_nr or '' }}"
+                           placeholder="921757131" title="Norsk org.nr eller VAT-nr">
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label-xs">Att. person</label>
+                    <input type="text" name="imp_att" class="form-control form-control-sm"
+                           value="{{ importoer.att or t.att or '' }}">
                 </div>
             </div>
 
-            <div class="mb-3">
-                <label class="form-label-xs">Oprindelsesland</label>
-                <input type="text" name="oprindelsesland" value="Danmark" class="form-control">
-                <div class="small mt-1" style="color: var(--text-muted);">
-                    Land hvor varerne er fremstillet. Vises på toldfakturaen.
+            <!-- ── Leveringsadresse (toggle) ── -->
+            <div class="section-label mt-3">Leveringsadresse</div>
+            <div class="form-check mb-2">
+                <input type="checkbox" class="form-check-input" id="lev_anderledes" name="lev_anderledes" onchange="toggleLevAdr()">
+                <label class="form-check-label small" for="lev_anderledes">
+                    Leveringsadresse er anderledes end importør (fx specifik UNO-X site)
+                </label>
+            </div>
+            <div class="small mb-2" style="color: var(--text-muted);" id="lev_default_info">
+                Standard: leveringsadressen er importørens adresse{% if t.site %} med "<strong>{{ t.site }}</strong>" som site-navn{% endif %}.
+            </div>
+
+            <div id="lev_form" class="row g-2 mb-3" style="display:none;">
+                <div class="col-md-6">
+                    <label class="form-label-xs">Modtager-navn (typisk site)</label>
+                    <input type="text" name="lev_navn" class="form-control form-control-sm"
+                           value="{{ t.kunde }}{% if t.site %} {{ t.site }}{% endif %}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label-xs">Adresse</label>
+                    <input type="text" name="lev_adresse" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label-xs">Postnr.</label>
+                    <input type="text" name="lev_postnr" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label-xs">By</label>
+                    <input type="text" name="lev_by" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label-xs">Att. person på leveringsstedet (valgfrit)</label>
+                    <input type="text" name="lev_att" class="form-control form-control-sm"
+                           placeholder="Fx ‘Alexander Veum tlf +47 95816471’">
                 </div>
             </div>
 
-            <div class="alert" style="background:#f0f9ff; border:1px solid #bae6fd; color:#0c4a6e; font-size:0.85rem;">
+            <div class="alert mt-3" style="background:#f0f9ff; border:1px solid #bae6fd; color:#0c4a6e; font-size:0.85rem;">
                 <i class="fa fa-info-circle me-1"></i>
-                <strong>Toldfakturaen indeholder:</strong> afsender (AhSolution CVR), modtager,
-                produktlinjer fra tilbuddet, fragt som separat linje, total handelsværdi, Incoterm DAP,
-                eksport-deklaration og signaturfelt.
+                <strong>PDF'en indeholder:</strong> AhSolution-stamdata, kunde/importør-info (m. NO org.nr fra Dinero),
+                leveringsadresse, produktlinjer fra tilbud (m. HS-koder), fragt som separat linje, subtotal + total,
+                "Moms 0% – eksport ML §34" og "DAP &lt;by&gt;, Norway (Incoterms® 2020)".
             </div>
 
             <div class="d-flex justify-content-between mt-4">
@@ -82,5 +169,14 @@
     </div>
 </div>
 
+<script>
+function toggleLevAdr() {
+    const cb  = document.getElementById('lev_anderledes');
+    const div = document.getElementById('lev_form');
+    const def = document.getElementById('lev_default_info');
+    div.style.display = cb.checked ? '' : 'none';
+    def.style.display = cb.checked ? 'none' : '';
+}
+</script>
 </body>
 </html>

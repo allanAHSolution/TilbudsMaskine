@@ -145,6 +145,55 @@ def hent_kontakter(sog="", limit=100):
     return ud
 
 
+def hent_kontakt_detaljer(navn):
+    """
+    Slår en kontakt op via navn og returnerer komplet info:
+    navn, vat_nr (org.nr ved NO), adresse_linje, postnr, by, land, email, telefon.
+    Returnerer None hvis kontakten ikke findes.
+    """
+    if not navn:
+        return None
+    navn_l = navn.lower().strip()
+    oid = _org_id()
+
+    # Find guid via fritekst-søgning lokalt (samme som hent_kontakter)
+    res = requests.get(
+        f"{API_BASE}/{oid}/contacts?{urlencode({'pageSize': 500, 'page': 0})}",
+        headers=_headers(), timeout=15,
+    )
+    res.raise_for_status()
+    coll = res.json().get("Collection", [])
+    guid = None
+    for c in coll:
+        n = (c.get("name") or c.get("Name") or "").lower().strip()
+        if n == navn_l:
+            guid = c.get("contactGuid") or c.get("ContactGuid")
+            break
+    if not guid:
+        return None
+
+    # Hent fulde detaljer
+    res = requests.get(
+        f"{API_BASE}/{oid}/contacts/{guid}",
+        headers=_headers(), timeout=15,
+    )
+    if not res.ok:
+        return None
+    d = res.json()
+    # Felter er ofte PascalCase i detail-endpoint
+    return {
+        "navn":           d.get("Name") or d.get("name") or "",
+        "vat_nr":         d.get("VatNumber") or d.get("vatNumber") or "",
+        "adresse_linje":  d.get("Street") or d.get("street") or "",
+        "postnr":         d.get("ZipCode") or d.get("zipCode") or "",
+        "by":             d.get("City") or d.get("city") or "",
+        "land_kode":      d.get("CountryKey") or d.get("countryKey") or "",
+        "email":          d.get("Email") or d.get("email") or "",
+        "telefon":        d.get("Phone") or d.get("phone") or "",
+        "att":            d.get("AttPerson") or d.get("attPerson") or "",
+    }
+
+
 def find_eller_opret_kontakt(navn, email=""):
     """
     Søger efter en kontakt med samme navn (case-insensitive).

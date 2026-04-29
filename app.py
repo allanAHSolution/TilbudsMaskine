@@ -473,14 +473,12 @@ def generer_pdf(tilbud, doc_type="tilbud"):
 
 
 def generer_toldfaktura_pdf(tilbud, fragt_beloeb=0.0, fragt_valuta=None,
-                             oprindelsesland="Danmark"):
-    """
-    Genererer toldfaktura (customs invoice) for eksport DK→NO.
-    DAP-incoterm, fragt som separat linje, deklaration + signatur-felt.
-    """
-    BLUE = (30, 50, 90)
-    LIGHT_BLUE = (230, 235, 245)
-    GREY_ROW = (245, 247, 250)
+                             oprindelsesland="Danmark",
+                             importoer=None, leveringsadresse=None,
+                             faktura_nr=None, faktura_dato=None):
+    BLUE      = (30, 50, 90)
+    GREY_ROW  = (245, 247, 250)
+    GREY_TEXT = (90, 90, 95)
 
     FONT_DIR = os.path.join(BASE_DIR, 'fonts')
     pdf = FPDF()
@@ -491,177 +489,197 @@ def generer_toldfaktura_pdf(tilbud, fragt_beloeb=0.0, fragt_valuta=None,
     pdf.add_page()
     pdf.set_margins(15, 15, 15)
 
-    # Logo
-    logo_path = os.path.join(BASE_DIR, 'static', 'logo.png')
-    if os.path.exists(logo_path):
-        pdf.image(logo_path, x=15, y=12, h=18)
+    valuta = fragt_valuta or tilbud.get('valuta', 'DKK')
+    nr_str = str(faktura_nr) if faktura_nr else str(tilbud.get('nummer', ''))
+    dato_str = faktura_dato or datetime.now().strftime('%B %d, %Y')
 
-    # Titel
-    pdf.set_xy(15, 12)
-    pdf.set_font('DejaVu', 'B', 18)
-    pdf.set_text_color(*BLUE)
-    pdf.cell(0, 10, f"TOLDFAKTURA #{tilbud['nummer']}", align='R')
-    pdf.ln(7)
-    pdf.set_font('DejaVu', '', 8)
-    pdf.set_text_color(120, 120, 120)
-    pdf.cell(0, 4, 'Customs Invoice — Eksport DK → NO', align='R')
-    pdf.ln(8)
+    # ── Header: Firmanavn venstre, TOLDFAKTURA højre i lysegrå ──
+    pdf.set_xy(15, 15)
+    pdf.set_font('DejaVu', 'B', 16); pdf.set_text_color(20, 20, 30)
+    pdf.cell(95, 8, 'AhSolution ApS')
+    pdf.set_xy(110, 12)
+    pdf.set_font('DejaVu', 'B', 28); pdf.set_text_color(180, 180, 190)
+    pdf.cell(85, 14, 'TOLDFAKTURA', align='R')
+    pdf.ln(14)
 
-    valuta = fragt_valuta or tilbud.get('valuta', 'NOK')
+    # ── Adresse-linjer venstre + Dato/nr højre ──
+    pdf.set_xy(15, 30)
+    pdf.set_font('DejaVu', '', 9); pdf.set_text_color(50, 50, 50)
+    afs_lines = ['Tingbakken 39', '8883 Gjern', 'Tlf. 2381 7272', 'CVR.nr. 45 08 11 25']
+    for line in afs_lines:
+        pdf.cell(95, 4.5, safe_text(line)); pdf.ln(4.5)
+
+    # Dato + Faktura nr højre side
+    pdf.set_xy(125, 30)
+    pdf.set_font('DejaVu', 'B', 9); pdf.set_text_color(20, 20, 30)
+    pdf.cell(35, 4.5, 'Dato', align='R')
     pdf.set_font('DejaVu', '', 9)
-    pdf.set_text_color(100, 100, 100)
-    pdf.cell(0, 5, f"Dato: {tilbud.get('dato', '')}   |   Valuta: {valuta}   |   Incoterm: DAP", align='R')
+    pdf.cell(35, 4.5, dato_str, align='R'); pdf.ln(4.5)
+    pdf.set_x(125)
+    pdf.set_font('DejaVu', 'B', 9)
+    pdf.cell(35, 4.5, 'Faktura nr.', align='R')
+    pdf.set_font('DejaVu', '', 9)
+    pdf.cell(35, 4.5, nr_str, align='R'); pdf.ln(8)
+
+    # ── Importør + Leveringsadresse side om side ──
+    y_blocks = max(pdf.get_y() + 4, 56)
+    pdf.set_xy(15, y_blocks)
+
+    imp = importoer or {}
+    pdf.set_font('DejaVu', 'B', 9); pdf.set_text_color(20, 20, 30)
+    pdf.cell(90, 4.5, 'Kunde importør :'); pdf.ln(5)
+    pdf.set_font('DejaVu', '', 9); pdf.set_text_color(50, 50, 50)
+    imp_lines = [imp.get('navn') or tilbud.get('kunde', '')]
+    if imp.get('adresse_linje'): imp_lines.append(imp['adresse_linje'])
+    postnr_by = ' '.join(filter(None, [imp.get('postnr', ''), imp.get('by', '')]))
+    if postnr_by:
+        # Map landekode til navn
+        land_map = {'NO': 'Norge', 'SE': 'Sverige', 'DE': 'Tyskland', 'GB': 'UK', 'DK': 'Danmark'}
+        land = land_map.get((imp.get('land_kode') or '').upper(), imp.get('land_kode', ''))
+        imp_lines.append(f"{postnr_by}{(' ' + land) if land else ''}")
+    if imp.get('vat_nr'):
+        # Norske kontakter har 9-cifret org.nr — præfix NO
+        vat = imp['vat_nr']
+        if (imp.get('land_kode') or '').upper() == 'NO' and not vat.upper().startswith('NO'):
+            vat = 'NO' + vat
+        imp_lines.append(vat)
+    if imp.get('att'):
+        imp_lines.append(f"[Att. {imp['att']}]")
+    elif tilbud.get('att'):
+        imp_lines.append(f"[Att. {tilbud['att']}]")
+    for line in imp_lines:
+        pdf.cell(90, 4.5, safe_text(line)); pdf.ln(4.5)
+
+    # Leveringsadresse højre
+    pdf.set_xy(110, y_blocks)
+    pdf.set_font('DejaVu', 'B', 9); pdf.set_text_color(20, 20, 30)
+    pdf.cell(85, 4.5, 'Leveringsadresse'); pdf.ln(5)
+    pdf.set_font('DejaVu', '', 9); pdf.set_text_color(50, 50, 50)
+    lev = leveringsadresse or {}
+    lev_lines = []
+    if lev.get('navn'): lev_lines.append(lev['navn'])
+    if lev.get('adresse_linje'): lev_lines.append(lev['adresse_linje'])
+    if lev.get('postnr') or lev.get('by'):
+        lev_lines.append(' '.join(filter(None, [lev.get('postnr', ''), lev.get('by', '')])))
+    if lev.get('att'):
+        lev_lines.append(f"[Att. {lev['att']}]")
+    if not lev_lines:
+        lev_lines = ['—']
+    for line in lev_lines:
+        pdf.set_x(110)
+        pdf.cell(85, 4.5, safe_text(line)); pdf.ln(4.5)
+
+    pdf.ln(6)
+
+    # ── Produkttabel: Beskrivelse | Beløb ──
+    table_y = pdf.get_y()
+    pdf.set_fill_color(*BLUE); pdf.set_text_color(255, 255, 255)
+    pdf.set_font('DejaVu', 'B', 9.5)
+    pdf.cell(135, 8, '  Beskrivelse', fill=True)
+    pdf.cell(45, 8, 'Beløb  ', fill=True, align='R')
     pdf.ln(8)
 
-    pdf.set_draw_color(*BLUE); pdf.set_line_width(0.5)
-    pdf.line(15, pdf.get_y(), 195, pdf.get_y())
-    pdf.ln(6)
-
-    # ── Afsender + Modtager (side om side) ──
-    y_start = pdf.get_y()
-    # Afsender
-    pdf.set_font('DejaVu', 'B', 8); pdf.set_text_color(100, 100, 100)
-    pdf.cell(85, 4, 'AFSENDER / EXPORTER'); pdf.ln(5)
-    pdf.set_font('DejaVu', 'B', 10); pdf.set_text_color(*BLUE)
-    pdf.cell(85, 5, 'AhSolution ApS'); pdf.ln(5)
-    pdf.set_font('DejaVu', '', 8.5); pdf.set_text_color(50, 50, 50)
-    for line in ['Tingbakken 39', '8883 Gjern, Denmark',
-                 'CVR / EORI: DK 45081125',
-                 'ah@ahsolution.dk · +45 23 81 72 72']:
-        pdf.cell(85, 4, safe_text(line)); pdf.ln(4)
-
-    # Modtager (samme y, x=110)
-    pdf.set_xy(110, y_start)
-    pdf.set_font('DejaVu', 'B', 8); pdf.set_text_color(100, 100, 100)
-    pdf.cell(85, 4, 'MODTAGER / CONSIGNEE'); pdf.ln(5)
-    pdf.set_x(110)
-    pdf.set_font('DejaVu', 'B', 10); pdf.set_text_color(*BLUE)
-    pdf.cell(85, 5, safe_text(tilbud.get('kunde', ''))); pdf.ln(5)
-    pdf.set_x(110)
-    pdf.set_font('DejaVu', '', 8.5); pdf.set_text_color(50, 50, 50)
-    if tilbud.get('site'):
-        pdf.cell(85, 4, safe_text(tilbud['site'])); pdf.ln(4)
-        pdf.set_x(110)
-    if tilbud.get('att'):
-        pdf.cell(85, 4, safe_text(f"Att: {tilbud['att']}")); pdf.ln(4)
-        pdf.set_x(110)
-    pdf.cell(85, 4, 'Country: Norway'); pdf.ln(4)
-    pdf.ln(6)
-
-    # ── Produkttabel ──
-    pdf.set_fill_color(*BLUE); pdf.set_text_color(255, 255, 255)
-    pdf.set_font('DejaVu', 'B', 8.5)
-    pdf.cell(8, 7, 'Nr',     fill=True, align='C')
-    pdf.cell(72, 7, 'Beskrivelse / Description', fill=True)
-    pdf.cell(20, 7, 'HS-kode', fill=True, align='C')
-    pdf.cell(18, 7, 'Origin', fill=True, align='C')
-    pdf.cell(15, 7, 'Antal',  fill=True, align='C')
-    pdf.cell(22, 7, 'Pris/stk', fill=True, align='R')
-    pdf.cell(25, 7, 'Total',  fill=True, align='R')
-    pdf.ln(7)
-
-    # Stamdata-lookup for at finde HS-koder for produkter der ikke har dem på linjen
+    # Stamdata-lookup
     stamdata_hs = {p['navn'].lower().strip(): (p.get('hs_kode') or '').strip()
-                    for p in load_data(PRODUKTER_FILE, [])}
+                   for p in load_data(PRODUKTER_FILE, [])}
 
-    total_sum = 0
+    total_sum = 0.0
     for i, p in enumerate(tilbud.get('produkter', [])):
         antal = _f(p.get('antal', 1), 1)
         pris  = _f(p.get('pris', 0))
         linje_total = antal * pris
         total_sum += linje_total
-        fill = (i % 2 == 0); bg = GREY_ROW if fill else (255, 255, 255)
-        pdf.set_fill_color(*bg); pdf.set_text_color(30, 30, 30)
-        pdf.set_font('DejaVu', '', 8.5)
-        # HS-kode: linje først, ellers stamdata-opslag, ellers gæt fra navn
-        hs_kode = (p.get('hs_kode') or '').strip()
-        if not hs_kode:
-            hs_kode = stamdata_hs.get(p.get('navn', '').lower().strip(), '')
-        if not hs_kode:
-            hs_kode = gæt_hs_kode(p.get('navn', ''))
-        pdf.cell(8, 6, str(i+1), fill=fill, align='C')
-        pdf.cell(72, 6, safe_text(p.get('navn', ''))[:42], fill=fill)
-        pdf.cell(20, 6, safe_text(hs_kode), fill=fill, align='C')
-        pdf.cell(18, 6, safe_text(p.get('origin', oprindelsesland[:2].upper())), fill=fill, align='C')
-        antal_str = str(int(antal)) if antal == int(antal) else str(antal)
-        pdf.cell(15, 6, antal_str, fill=fill, align='C')
-        if pris == 0:
-            pdf.set_font('DejaVu', 'I', 8.5); pdf.set_text_color(120, 120, 120)
-            pdf.cell(22, 6, 'Inkluderet', fill=fill, align='R')
-            pdf.cell(25, 6, '—', fill=fill, align='R')
-            pdf.set_font('DejaVu', '', 8.5); pdf.set_text_color(30, 30, 30)
+
+        navn = p.get('navn', '')
+        antal_str = str(int(antal)) if antal == int(antal) else f"{antal:.2f}"
+
+        # Beskrivelse-tekst
+        if pris > 0 and antal != 1:
+            besk = f"{antal_str} stk {navn} x {pris:,.0f} {valuta}"
+        elif pris > 0:
+            besk = f"{antal_str} stk {navn}"
         else:
-            pdf.cell(22, 6, f"{pris:,.0f}", fill=fill, align='R')
-            pdf.cell(25, 6, f"{linje_total:,.0f}", fill=fill, align='R')
-        pdf.ln(6)
+            besk = f"{antal_str} stk {navn}"
 
-    pdf.ln(2)
+        # HS-kode (3-trins fallback)
+        hs = (p.get('hs_kode') or '').strip()
+        if not hs:
+            hs = stamdata_hs.get(navn.lower().strip(), '')
+        if not hs:
+            hs = gæt_hs_kode(navn)
 
-    # ── Totaler: Subtotal varer + Fragt + Total ──
-    pdf.set_text_color(50, 50, 50); pdf.set_font('DejaVu', '', 9)
-    pdf.cell(155, 6, 'Subtotal varer / Goods value', align='R')
-    pdf.cell(25, 6, f"{total_sum:,.0f} {valuta}", align='R'); pdf.ln(6)
+        # Beløb-tekst
+        if pris == 0:
+            beloeb_str = 'Inkluderet'
+        else:
+            beloeb_str = f"{linje_total:,.2f} {valuta}".replace(',', '_').replace('.', ',').replace('_', '.')
 
-    pdf.cell(155, 6, 'Fragt / Freight (DAP)', align='R')
-    pdf.cell(25, 6, f"{fragt_beloeb:,.0f} {valuta}", align='R'); pdf.ln(6)
-
-    total_inkl_fragt = total_sum + fragt_beloeb
-    pdf.set_fill_color(*LIGHT_BLUE); pdf.set_text_color(*BLUE)
-    pdf.set_font('DejaVu', 'B', 10)
-    pdf.cell(155, 8, 'TOTAL FAKTURA-VÆRDI / Total invoice value', fill=True, align='R')
-    pdf.cell(25, 8, f"{total_inkl_fragt:,.0f} {valuta}", fill=True, align='R'); pdf.ln(10)
-
-    # ── Tolddeklaration ──
-    pdf.set_draw_color(*BLUE); pdf.set_line_width(0.4)
-    pdf.line(15, pdf.get_y(), 195, pdf.get_y()); pdf.ln(4)
-
-    pdf.set_font('DejaVu', 'B', 9); pdf.set_text_color(*BLUE)
-    pdf.cell(0, 5, 'TOLDOPLYSNINGER / CUSTOMS INFORMATION'); pdf.ln(6)
-    pdf.set_font('DejaVu', '', 8.5); pdf.set_text_color(50, 50, 50)
-
-    info = [
-        ('Oprindelsesland / Country of origin:', oprindelsesland),
-        ('Eksportør CVR / EORI:',                'DK 45081125'),
-        ('Incoterm:',                            'DAP (Delivered at Place)'),
-        ('Transportmåde / Mode of transport:',   'Vej / Road'),
-        ('Faktura-formål / Reason for export:',  'Salg / Sale'),
-        ('Valuta / Currency:',                    valuta),
-    ]
-    for label, val in info:
-        pdf.set_font('DejaVu', 'B', 8.5)
-        pdf.cell(60, 5, safe_text(label))
-        pdf.set_font('DejaVu', '', 8.5)
-        pdf.cell(0, 5, safe_text(val))
+        pdf.set_text_color(20, 20, 30); pdf.set_font('DejaVu', '', 9)
+        pdf.cell(135, 6, safe_text(besk))
+        if pris == 0:
+            pdf.set_font('DejaVu', 'I', 9); pdf.set_text_color(120, 120, 120)
+            pdf.cell(45, 6, beloeb_str + '  ', align='R')
+            pdf.set_text_color(20, 20, 30); pdf.set_font('DejaVu', '', 9)
+        else:
+            pdf.cell(45, 6, beloeb_str + '  ', align='R')
         pdf.ln(5)
-    pdf.ln(2)
 
-    # ── Deklaration + signatur ──
-    pdf.set_font('DejaVu', 'I', 8); pdf.set_text_color(80, 80, 80)
-    pdf.multi_cell(0, 4,
-        'I certify that the information given on this invoice is true and correct, and '
-        'that the contents and value of this consignment are as stated above. '
-        'The goods described herein are of EU origin and comply with applicable export regulations.')
+        if hs:
+            pdf.set_font('DejaVu', '', 8); pdf.set_text_color(*GREY_TEXT)
+            # Vis kun de 4 første tegn af HS (industristandard på fakturaer)
+            kort_hs = hs.split('.')[0] if '.' in hs else hs[:4]
+            pdf.cell(135, 4.5, f"HS {kort_hs}")
+            pdf.cell(45, 4.5, '', align='R')
+            pdf.ln(5)
+
+        pdf.ln(1)
+
+    # Fragt-linje
+    if fragt_beloeb > 0:
+        pdf.set_text_color(20, 20, 30); pdf.set_font('DejaVu', '', 9)
+        pdf.cell(135, 6, 'Fragt og håndtering')
+        fragt_str = f"{fragt_beloeb:,.2f} {valuta}".replace(',', '_').replace('.', ',').replace('_', '.')
+        pdf.cell(45, 6, fragt_str + '  ', align='R')
+        pdf.ln(8)
+
+    # Lidt mellemrum
+    pdf.ln(4)
+
+    # ── Subtotal + Total ──
+    total = total_sum + fragt_beloeb
+    sub_str   = f"{total_sum + fragt_beloeb:,.2f} {valuta}".replace(',', '_').replace('.', ',').replace('_', '.')
+    total_str = f"{total:,.2f} {valuta}".replace(',', '_').replace('.', ',').replace('_', '.')
+
+    pdf.set_fill_color(*GREY_ROW); pdf.set_text_color(20, 20, 30)
+    pdf.set_font('DejaVu', 'B', 9.5)
+    pdf.cell(135, 7, '', fill=True)
+    pdf.cell(20, 7, 'Subtotal', fill=True, align='R')
+    pdf.set_font('DejaVu', '', 9.5)
+    pdf.cell(25, 7, sub_str + '  ', fill=True, align='R')
+    pdf.ln(7)
+
+    pdf.set_fill_color(*GREY_ROW)
+    pdf.cell(135, 7, '', fill=True)
+    pdf.cell(20, 7, '', fill=True)
+    pdf.cell(25, 7, '', fill=True)
+    pdf.ln(7)
+
+    pdf.set_fill_color(*GREY_ROW); pdf.set_font('DejaVu', 'B', 10)
+    pdf.cell(135, 8, '', fill=True)
+    pdf.cell(20, 8, 'Total', fill=True, align='R')
+    pdf.cell(25, 8, total_str + '  ', fill=True, align='R')
+    pdf.ln(12)
+
+    # ── Footer notes ──
+    pdf.set_text_color(20, 20, 30); pdf.set_font('DejaVu', '', 9)
+    pdf.cell(0, 5, 'Moms: 0% - eksport af varer uden for EU, ML §34'); pdf.ln(5)
+
+    leverings_by = (lev.get('by') if lev else '') or imp.get('by', '') or '[by]'
+    pdf.cell(0, 5, f'Incoterm: "DAP {leverings_by}, Norway (Incoterms® 2020)')
     pdf.ln(8)
 
-    pdf.set_font('DejaVu', '', 8.5); pdf.set_text_color(80, 80, 80)
-    y_sig = pdf.get_y()
-    pdf.set_xy(15, y_sig)
-    pdf.cell(85, 5, 'Sted / Place: Gjern, Denmark'); pdf.ln(4)
-    pdf.cell(85, 5, f'Dato / Date: {tilbud.get("dato", "")}'); pdf.ln(8)
-    pdf.set_draw_color(120, 120, 120); pdf.set_line_width(0.3)
-    pdf.line(15, pdf.get_y(), 95, pdf.get_y()); pdf.ln(2)
-    pdf.set_font('DejaVu', '', 7.5)
-    pdf.cell(85, 4, 'Signatur / Signature (AhSolution ApS)')
-
-    # Footer
-    pdf.set_y(-15)
-    pdf.set_draw_color(200, 200, 200); pdf.set_line_width(0.3)
-    pdf.line(15, pdf.get_y(), 195, pdf.get_y()); pdf.ln(2)
-    pdf.set_font('DejaVu', '', 7.5); pdf.set_text_color(150, 150, 150)
-    pdf.cell(0, 4, 'AhSolution ApS  |  CVR: 45081125  |  ah@ahsolution.dk  |  +45 23 81 72 72  |  Tingbakken 39, 8883 Gjern', align='C')
-
-    kunde_safe = tilbud.get('kunde', 'Kunde').strip().replace(' ', '_').replace('/', '_')
-    filename = f"Toldfaktura_{kunde_safe}_{tilbud['nummer']}.pdf"
+    kunde_safe = (importoer or {}).get('navn', tilbud.get('kunde', 'Kunde')).strip().replace(' ', '_').replace('/', '_')
+    filename = f"Toldfaktura_{kunde_safe}_{nr_str}.pdf"
     filepath = os.path.join(BASE_DIR, filename)
     pdf.output(filepath)
     return filepath, filename
@@ -1310,7 +1328,7 @@ def download_pdf(tilbud_id, doc_type):
 
 @app.route('/toldfaktura/<tilbud_id>', methods=['GET', 'POST'])
 def toldfaktura(tilbud_id):
-    """Form til toldfaktura: indtast fragt-pris, generer PDF."""
+    """Form til toldfaktura: hent importør fra Dinero + valgfri manuel leveringsadresse."""
     if not session.get('logged_in'):
         return redirect(url_for('login'))
 
@@ -1319,14 +1337,62 @@ def toldfaktura(tilbud_id):
     if not tilbud:
         return "Tilbud ikke fundet", 404
 
+    # Hent importør fra Dinero (auto-udfyld)
+    importoer = None
+    if DINERO_OK and tilbud.get('kunde'):
+        try:
+            importoer = dinero_api.hent_kontakt_detaljer(tilbud['kunde'])
+        except Exception:
+            importoer = None
+    if not importoer:
+        importoer = {'navn': tilbud.get('kunde', ''), 'land_kode': 'NO'}
+
     if request.method == 'POST':
         fragt_beloeb = _f(request.form.get('fragt_beloeb', 0))
         fragt_valuta = request.form.get('fragt_valuta') or tilbud.get('valuta', 'NOK')
         oprindelse   = request.form.get('oprindelsesland', 'Danmark')
-        filepath, filename = generer_toldfaktura_pdf(tilbud, fragt_beloeb, fragt_valuta, oprindelse)
+        faktura_nr   = (request.form.get('faktura_nr') or '').strip() or None
+
+        # Importør (kan have rettet vat_nr i form'en)
+        importoer_data = {
+            'navn':          request.form.get('imp_navn',   importoer.get('navn', '')),
+            'adresse_linje': request.form.get('imp_adresse', importoer.get('adresse_linje', '')),
+            'postnr':        request.form.get('imp_postnr', importoer.get('postnr', '')),
+            'by':            request.form.get('imp_by',     importoer.get('by', '')),
+            'land_kode':     request.form.get('imp_land',   importoer.get('land_kode', 'NO')),
+            'vat_nr':        request.form.get('imp_vat',    importoer.get('vat_nr', '')),
+            'att':           request.form.get('imp_att',    importoer.get('att', '') or tilbud.get('att', '')),
+        }
+
+        # Leveringsadresse: kun hvis checkbox er sat — ellers tom (PDF udfylder med info fra tilbud.site)
+        leverings_data = None
+        if request.form.get('lev_anderledes') == 'on':
+            leverings_data = {
+                'navn':          request.form.get('lev_navn', ''),
+                'adresse_linje': request.form.get('lev_adresse', ''),
+                'postnr':        request.form.get('lev_postnr', ''),
+                'by':            request.form.get('lev_by', ''),
+                'att':           request.form.get('lev_att', ''),
+            }
+        else:
+            # Default: brug tilbud.site som modtager-navn + importør-adresse
+            site = tilbud.get('site', '').strip()
+            leverings_data = {
+                'navn':          (importoer_data['navn'] + (' — ' + site if site else '')),
+                'adresse_linje': importoer_data.get('adresse_linje', ''),
+                'postnr':        importoer_data.get('postnr', ''),
+                'by':            importoer_data.get('by', ''),
+                'att':           importoer_data.get('att', ''),
+            }
+
+        filepath, filename = generer_toldfaktura_pdf(
+            tilbud, fragt_beloeb, fragt_valuta, oprindelse,
+            importoer=importoer_data, leveringsadresse=leverings_data,
+            faktura_nr=faktura_nr,
+        )
         return send_file(filepath, as_attachment=True, download_name=filename)
 
-    return render_template('toldfaktura_form.html', t=tilbud, id=tilbud_id)
+    return render_template('toldfaktura_form.html', t=tilbud, id=tilbud_id, importoer=importoer)
 
 
 @app.route('/status/<tilbud_id>/<status>')

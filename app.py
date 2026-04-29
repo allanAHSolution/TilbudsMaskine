@@ -834,16 +834,23 @@ def manage_products():
 
     products = load_data(PRODUKTER_FILE, [])
     leverandoerer = load_data(LEVERANDOERER_FILE, [])
-    indstillinger = load_data(INDSTILLINGER_FILE, {"kurser": {"NOK": 0.63, "EUR": 7.46}})
-    kurser = indstillinger.get("kurser", {"NOK": 0.63, "EUR": 7.46})
+    indstillinger = load_data(INDSTILLINGER_FILE, {"kurser": {"NOK": 0.63, "EUR": 7.46, "SEK": 0.67, "USD": 6.85}})
+    kurser = indstillinger.get("kurser", {"NOK": 0.63, "EUR": 7.46, "SEK": 0.67, "USD": 6.85})
 
     if request.method == 'POST':
         action = request.form.get('action')
+        # Kostpris kan indtastes i hvilken som helst valuta — konverter til DKK
+        kostpris_orig   = float(request.form.get('kostpris_input', 0) or 0)
+        kostpris_valuta = request.form.get('kostpris_valuta', 'DKK') or 'DKK'
+        kostpris_dkk    = til_dkk(kostpris_orig, kostpris_valuta, kurser)
+
         if action == 'add':
             products.append({
                 "navn": request.form.get('navn'),
                 "pris": float(request.form.get('pris', 0)),
-                "kostpris": float(request.form.get('kostpris', 0) or 0),
+                "kostpris":        kostpris_dkk,
+                "kostpris_orig":   kostpris_orig,
+                "kostpris_valuta": kostpris_valuta,
                 "enhed": request.form.get('enhed', ''),
                 "leverandoer": request.form.get('leverandoer', '')
             })
@@ -855,7 +862,9 @@ def manage_products():
             products[index] = {
                 "navn": request.form.get('navn'),
                 "pris": float(request.form.get('pris', 0)),
-                "kostpris": float(request.form.get('kostpris', 0) or 0),
+                "kostpris":        kostpris_dkk,
+                "kostpris_orig":   kostpris_orig,
+                "kostpris_valuta": kostpris_valuta,
                 "enhed": request.form.get('enhed', ''),
                 "leverandoer": request.form.get('leverandoer', '')
             }
@@ -1562,10 +1571,12 @@ def save_indstillinger():
         nok_kurs = float(request.form.get('nok_kurs', 0.63))
         eur_kurs = float(request.form.get('eur_kurs', 7.46))
         sek_kurs = float(request.form.get('sek_kurs', 0.67))
+        usd_kurs = float(request.form.get('usd_kurs', 6.85))
     except (ValueError, TypeError):
-        nok_kurs, eur_kurs, sek_kurs = 0.63, 7.46, 0.67
+        nok_kurs, eur_kurs, sek_kurs, usd_kurs = 0.63, 7.46, 0.67, 6.85
 
-    save_data(INDSTILLINGER_FILE, {"kurser": {"NOK": nok_kurs, "EUR": eur_kurs, "SEK": sek_kurs}})
+    save_data(INDSTILLINGER_FILE, {"kurser": {"NOK": nok_kurs, "EUR": eur_kurs,
+                                               "SEK": sek_kurs, "USD": usd_kurs}})
     return redirect(url_for('manage_products', fane='indstillinger'))
 
 

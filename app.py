@@ -316,17 +316,17 @@ def generer_pdf(tilbud, doc_type="tilbud"):
         pdf.ln(6)
 
     # Produkttabel - header
+    valuta = tilbud.get('valuta', 'NOK')
     pdf.set_fill_color(*BLUE)
     pdf.set_text_color(255, 255, 255)
     pdf.set_font('DejaVu', 'B', 9)
     pdf.cell(88, 7, 'BESKRIVELSE', fill=True)
     pdf.cell(22, 7, 'ANTAL', fill=True, align='C')
-    pdf.cell(40, 7, 'ENHEDSPRIS', fill=True, align='R')
-    pdf.cell(30, 7, 'TOTAL', fill=True, align='R')
+    pdf.cell(40, 7, f'ENHEDSPRIS ({valuta})', fill=True, align='R')
+    pdf.cell(30, 7, f'TOTAL ({valuta})', fill=True, align='R')
     pdf.ln(7)
 
     # Produktlinjer
-    valuta = tilbud.get('valuta', 'NOK')
     total_sum = 0
     for i, p in enumerate(tilbud.get('produkter', [])):
         try:
@@ -357,7 +357,7 @@ def generer_pdf(tilbud, doc_type="tilbud"):
             pdf.set_text_color(30, 30, 30)
             pdf.set_font('DejaVu', '', 9)
         else:
-            pdf.cell(40, 6, f"{pris:,.0f} {valuta}", fill=fill, align='R')
+            pdf.cell(40, 6, f"{pris:,.0f}", fill=fill, align='R')
             pdf.cell(30, 6, f"{linje_total:,.0f}", fill=fill, align='R')
         pdf.ln(6)
 

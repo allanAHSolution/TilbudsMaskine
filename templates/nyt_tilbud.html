@@ -28,6 +28,11 @@
         .desc-input { font-size: 0.75rem; color: var(--text-muted); border-top: none !important; border-left: none !important; border-right: none !important; border-radius: 0 !important; font-style: italic; background: transparent !important; padding-left: 0; }
         .desc-input:focus { box-shadow: none; border-color: var(--accent) !important; }
         .line-item { background: var(--bg-light); border: 1px solid var(--border) !important; border-radius: 8px !important; }
+        .drag-handle { cursor: grab; color: #94a3b8; font-size: 0.95rem; line-height: 1; user-select: none; padding: 2px 1px; letter-spacing: -2px; }
+        .drag-handle:hover { color: var(--accent); }
+        .drag-handle:active { cursor: grabbing; }
+        .sortable-ghost { opacity: 0.4; background: #e0e7ff !important; }
+        .sortable-chosen { box-shadow: 0 4px 12px rgba(30,50,90,0.2); }
         .produkt-valglist { display: none; position: absolute; z-index: 1050; width: 100%; background: white; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); max-height: 220px; overflow-y: auto; margin-top: 2px; left: 0; }
         .produkt-valg-item { padding: 7px 12px; cursor: pointer; font-size: 0.8rem; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
         .produkt-valg-item:last-child { border-bottom: none; }
@@ -150,7 +155,8 @@
                                 {% for p in rediger_data.produkter %}
                                 <div class="mb-2 p-2 line-item">
                                     <div class="row g-1 mb-1">
-                                        <div class="col-1 d-flex align-items-center">
+                                        <div class="col-1 d-flex align-items-center gap-1">
+                                            <span class="drag-handle" title="Træk for at ændre rækkefølge">⋮⋮</span>
                                             <button type="button" class="btn btn-xs btn-outline-danger"
                                                     onclick="fjernLinje(this)" title="Fjern linje">✕</button>
                                         </div>
@@ -191,7 +197,8 @@
                             {% else %}
                                 <div class="mb-2 p-2 line-item">
                                     <div class="row g-1 mb-1">
-                                        <div class="col-1 d-flex align-items-center">
+                                        <div class="col-1 d-flex align-items-center gap-1">
+                                            <span class="drag-handle" title="Træk for at ændre rækkefølge">⋮⋮</span>
                                             <button type="button" class="btn btn-xs btn-outline-danger"
                                                     onclick="fjernLinje(this)" title="Fjern linje">✕</button>
                                         </div>
@@ -294,6 +301,7 @@
 <script type="application/json" id="produkt-data">{{ produkter | tojson }}</script>
 <script type="application/json" id="kurser-data">{{ kurser | tojson }}</script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script>
     const produktDB = JSON.parse(document.getElementById('produkt-data').textContent);
     const KURSER    = JSON.parse(document.getElementById('kurser-data').textContent);
@@ -349,7 +357,8 @@
         const html = `
             <div class="mb-2 p-2 line-item">
                 <div class="row g-1 mb-1">
-                    <div class="col-1 d-flex align-items-center">
+                    <div class="col-1 d-flex align-items-center gap-1">
+                        <span class="drag-handle" title="Træk for at ændre rækkefølge">⋮⋮</span>
                         <button type="button" class="btn btn-xs btn-outline-danger" onclick="fjernLinje(this)" title="Fjern linje">✕</button>
                     </div>
                     <div class="col-6 position-relative">
@@ -462,7 +471,18 @@
     });
 
     // Initial beregning når siden er klar (vigtigt for rediger-mode hvor felter er prefilled)
-    document.addEventListener('DOMContentLoaded', opdaterKostpriser);
+    document.addEventListener('DOMContentLoaded', function() {
+        opdaterKostpriser();
+        const liste = document.getElementById('vare-liste');
+        if (liste && typeof Sortable !== 'undefined') {
+            Sortable.create(liste, {
+                handle: '.drag-handle',
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+            });
+        }
+    });
 
     document.addEventListener('click', function(e) {
         if (!e.target.closest('.position-relative')) {

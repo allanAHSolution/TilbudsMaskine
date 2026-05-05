@@ -424,12 +424,58 @@ def fetch_purchase_entries(from_date: str, to_date: str) -> list[dict]:
 _invoice_detail_cache = {}  # guid → detail dict
 
 
+def _request_med_retry(method, url, **kwargs):
+    """GET/POST med retry på transiente fejl (429, 5xx, timeout).
+
+    429 (rate limit) bruger Retry-After hvis Dinero sender den, ellers
+    eksponentiel backoff. 5xx/timeout får kortere backoff. Permanent
+    fejl (4xx undtaget 429) giver op straks.
+    """
+    last_err = None
+    for forsoeg in range(4):
+        try:
+            res = requests.request(method, url, **kwargs)
+            if res.ok:
+                return res
+            if res.status_code == 429:
+                wait = float(res.headers.get('Retry-After', '0')) or (1.5 * (2 ** forsoeg))
+                last_err = f"HTTP 429 (rate limit, venter {wait:.1f}s)"
+                if forsoeg < 3:
+                    time.sleep(min(wait, 10))
+                    continue
+            elif res.status_code in (500, 502, 503, 504):
+                last_err = f"HTTP {res.status_code}"
+                if forsoeg < 3:
+                    time.sleep(0.5 * (2 ** forsoeg))
+                    continue
+            else:
+                # Permanent fejl: 401, 403, 404 osv.
+                return res
+        except requests.RequestException as e:
+            last_err = type(e).__name__
+            if forsoeg < 3:
+                time.sleep(0.5 * (2 ** forsoeg))
+                continue
+        # Sidste forsøg fejlede
+        break
+    raise RuntimeError(f"Dinero {method} {url.split('/')[-1]} fejlede: {last_err}")
+
+
 def _hent_invoice_detail(guid: str) -> dict:
-    """Cached lookup af fuld faktura-detalje (beløb, status osv.)."""
+    """Cached lookup af fuld faktura-detalje (beløb, status osv.).
+
+    Retrier ved transiente fejl (timeout, 5xx, 429) så fakturaer ikke
+    forsvinder fra omsætningstal når Dinero har ustabile øjeblikke.
+    """
     if guid in _invoice_detail_cache:
         return _invoice_detail_cache[guid]
     oid = _org_id()
-    res = requests.get(f"{API_BASE}/{oid}/invoices/{guid}", headers=_headers(), timeout=15)
+    url = f"{API_BASE}/{oid}/invoices/{guid}"
+    try:
+        res = _request_med_retry('GET', url, headers=_headers(), timeout=15)
+    except RuntimeError as e:
+        print(f"⚠ {e}")
+        return {}
     if not res.ok:
         return {}
     j = res.json()
@@ -451,8 +497,8 @@ def fetch_invoices(from_date: str = None, to_date: str = None,
     all_rows = []
     for page in range(20):
         params = {"pageSize": 100, "page": page}
-        res = requests.get(
-            f"{API_BASE}/{oid}/invoices",
+        res = _request_med_retry(
+            'GET', f"{API_BASE}/{oid}/invoices",
             headers=_headers(), params=params, timeout=20,
         )
         if res.status_code == 401:

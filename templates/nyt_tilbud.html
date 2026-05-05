@@ -320,11 +320,32 @@
     function fmtPris(n) {
         return Math.round(n).toLocaleString('da-DK');
     }
-    // Parser dansk-formaterede tal: "12.345" → 12345, "12.345,50" → 12345.50, "12345" → 12345
+    // Parser tal som både kan være dansk-formateret ("12.345" / "12.345,50")
+    // og rå Python-float ("23941.0"). Spejler logikken i Python-helperen _f().
     function parsePris(s) {
         if (s == null) return 0;
-        const cleaned = String(s).replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
-        const n = parseFloat(cleaned);
+        let str = String(s).replace(/\s/g, '');
+        if (!str) return 0;
+        if (str.includes(',') && str.includes('.')) {
+            // Dansk: punktum=tusind, komma=decimal
+            str = str.replace(/\./g, '').replace(',', '.');
+        } else if (str.includes(',')) {
+            str = str.replace(',', '.');
+        } else if (str.includes('.')) {
+            const parts = str.split('.');
+            if (parts.length > 2) {
+                // Flere punktummer → alle er tusind-separatorer
+                str = parts.join('');
+            } else {
+                // Ét punktum: tusind-sep hvis præcis 3 cifre efter, ellers decimaltegn
+                const before = parts[0].replace('-', '');
+                const after  = parts[1];
+                if (after.length === 3 && /^\d+$/.test(before) && /^\d+$/.test(after)) {
+                    str = parts.join('');
+                }
+            }
+        }
+        const n = parseFloat(str);
         return isNaN(n) ? 0 : n;
     }
     function opdaterKostpriser() {
@@ -470,8 +491,23 @@
         });
     });
 
+    // Reformater rå Python-float ("23941.0") til pænt dansk format ("23.941")
+    // i pre-renderede felter — så det matcher det format JS arbejder i.
+    function reformaterPrefilled() {
+        document.querySelectorAll('.line-item').forEach(li => {
+            ['p_pris', 'p_kostpris'].forEach(name => {
+                const input = li.querySelector('[name="' + name + '"]');
+                if (input && input.value) {
+                    const n = parsePris(input.value);
+                    if (n > 0) input.value = fmtPris(n);
+                }
+            });
+        });
+    }
+
     // Initial beregning når siden er klar (vigtigt for rediger-mode hvor felter er prefilled)
     document.addEventListener('DOMContentLoaded', function() {
+        reformaterPrefilled();
         opdaterKostpriser();
         const liste = document.getElementById('vare-liste');
         if (liste && typeof Sortable !== 'undefined') {

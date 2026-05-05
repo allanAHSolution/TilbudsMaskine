@@ -1062,10 +1062,34 @@ def admin_panel():
                 for f in t.get('fakturaer', []):
                     if f.get('dinero_guid'):
                         kendte_guids.add(f['dinero_guid'])
+            # Byg allowlist-map: fakturanummer → projektkode (eksplicit tilknytning)
+            # og sæt af projekter der opter ud af navne-matching pga. allowlist
+            allowlist_map = {}
+            projekter_med_allowlist = set()
+            for _tid, _t in all_data.items():
+                _nums = _dinero_allowlist(_t)
+                if _nums is None:
+                    continue
+                _kode = f"PROJ-{_t.get('nummer', 0):03d}"
+                projekter_med_allowlist.add(_kode)
+                for _n in _nums:
+                    allowlist_map[_n] = _kode
+
             for i in dinero_invs_alle:
                 if i['guid'] in kendte_guids:
                     continue
-                kode = i.get('project_code') or _match_paa_navn(i.get('description', ''), pmap)
+                inv_num = None
+                try:
+                    inv_num = int(i.get('number'))
+                except (TypeError, ValueError):
+                    pass
+                if inv_num is not None and inv_num in allowlist_map:
+                    kode = allowlist_map[inv_num]
+                else:
+                    kode = i.get('project_code') or _match_paa_navn(i.get('description', ''), pmap)
+                    # Hvis projektet har allowlist og denne faktura ikke er på den → drop
+                    if kode in projekter_med_allowlist:
+                        kode = None
                 if kode and kode.startswith('PROJ-'):
                     beloeb_dkk = til_dkk(_f(i.get('total_incl_vat')), i.get('currency', 'DKK'), kurser)
                     dinero_salg_per_proj[kode] = dinero_salg_per_proj.get(kode, 0) + beloeb_dkk
@@ -1469,6 +1493,20 @@ def _sorter_opgaver(opgaver):
     return indekseret
 
 
+def _dinero_allowlist(tilbud):
+    """Returnér set af Dinero-fakturanumre der eksplicit hører til projektet, eller None hvis ingen allowlist er sat."""
+    nums = tilbud.get('projekt', {}).get('dinero_faktura_numre')
+    if not nums:
+        return None
+    result = set()
+    for n in nums:
+        try:
+            result.add(int(str(n).strip()))
+        except (TypeError, ValueError):
+            continue
+    return result if result else None
+
+
 def _alle_aabne_opgaver(all_data, idag):
     """Saml ufærdige opgaver fra alle vundne, ikke-arkiverede projekter, sorteret efter frist."""
     result = []
@@ -1558,10 +1596,19 @@ def projekt_side(tilbud_id):
             invs = dinero_api.fetch_invoices(from_date=f'{aar}-01-01')
             # Ekskludér fakturaer der allerede er i tilbud.fakturaer (pushet fra ERP)
             kendte_guids = {f.get('dinero_guid') for f in t.get('fakturaer', []) if f.get('dinero_guid')}
+            allowlist_nums = _dinero_allowlist(t)
             for i in invs:
                 if i['guid'] in kendte_guids:
                     continue
-                # Match via kode eller navn
+                if allowlist_nums is not None:
+                    # Eksplicit allowlist: kun de angivne fakturanumre tilhører projektet
+                    try:
+                        if int(i.get('number')) in allowlist_nums:
+                            dinero_salg.append(i)
+                    except (TypeError, ValueError):
+                        pass
+                    continue
+                # Ingen allowlist: auto-match via projektkode eller navn
                 kode = i.get('project_code') or _match_paa_navn(i.get('description', ''), pmap)
                 if kode == proj_code:
                     dinero_salg.append(i)
@@ -1640,6 +1687,35 @@ def projekt_slet_omkostning(tilbud_id, index):
         if 0 <= index < len(omk):
             omk.pop(index)
         save_data(TILBUD_FILE, all_data)
+    return redirect(url_for('projekt_side', tilbud_id=tilbud_id))
+
+
+@app.route('/projekt/<tilbud_id>/dinero-numre', methods=['POST'])
+def projekt_gem_dinero_numre(tilbud_id):
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+    all_data = load_data(TILBUD_FILE, {})
+    t = all_data.get(tilbud_id)
+    if not t or 'projekt' not in t:
+        return redirect(url_for('admin_panel'))
+
+    raw = request.form.get('numre', '')
+    numre = []
+    for stykke in raw.replace(';', ',').split(','):
+        s = stykke.strip()
+        if not s:
+            continue
+        try:
+            numre.append(int(s))
+        except ValueError:
+            continue
+    # Tom liste fjerner allowlist (auto-match igen)
+    if numre:
+        t['projekt']['dinero_faktura_numre'] = numre
+    else:
+        t['projekt'].pop('dinero_faktura_numre', None)
+    save_data(TILBUD_FILE, all_data)
     return redirect(url_for('projekt_side', tilbud_id=tilbud_id))
 
 
@@ -2066,6 +2142,9 @@ def faktura_slet(tilbud_id, index):
         if 0 <= index < len(fakturaer):
             fakturaer.pop(index)
         save_data(TILBUD_FILE, all_data)
+
+    if request.args.get('redir') == 'projekt':
+        return redirect(url_for('projekt_side', tilbud_id=tilbud_id))
     return redirect(url_for('admin_panel'))
 
 

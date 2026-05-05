@@ -252,9 +252,9 @@
 
                     {% for f in t.fakturaer|default([]) %}
                     <div class="fakt-item">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <div class="small fw-bold">{{ f.beskrivelse or 'Faktura' }}</div>
+                        <div class="d-flex justify-content-between align-items-center gap-2">
+                            <div style="min-width:0;">
+                                <div class="small fw-bold text-truncate">{{ f.beskrivelse or 'Faktura' }}</div>
                                 <div style="font-size:0.72rem; color: var(--text-muted);">
                                     {{ f.dato }}
                                     {% if f.dinero_status %}
@@ -262,7 +262,12 @@
                                     {% endif %}
                                 </div>
                             </div>
-                            <span class="fw-bold" style="color: var(--green);">{{ "{:,.0f}".format(f.beloeb) }} {{ f.valuta or t.valuta }}</span>
+                            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                <span class="fw-bold" style="color: var(--green);">{{ "{:,.0f}".format(f.beloeb) }} {{ f.valuta or t.valuta }}</span>
+                                <a href="/faktura/slet/{{ id }}/{{ loop.index0 }}?redir=projekt"
+                                   onclick="return confirm('Slet faktura?')"
+                                   class="btn btn-xs btn-outline-danger">✕</a>
+                            </div>
                         </div>
                     </div>
                     {% endfor %}
@@ -293,6 +298,28 @@
                         <div class="small">Ingen fakturaer registreret endnu</div>
                     </div>
                     {% endif %}
+
+                    <!-- Allowlist for Dinero-direkte fakturaer -->
+                    {% set allowlist = t.projekt.get('dinero_faktura_numre') or [] %}
+                    <form action="/projekt/{{ id }}/dinero-numre" method="POST"
+                          class="mt-3 pt-3" style="border-top:1px solid var(--border);">
+                        <label class="form-label-xs">
+                            <i class="fa fa-lock me-1"></i> Lås Dinero-fakturaer (numre)
+                        </label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" name="numre" class="form-control form-control-sm"
+                                   placeholder="F.eks. 70, 99 — efterlad tom for auto-match på navn"
+                                   value="{{ allowlist|join(', ') }}">
+                            <button type="submit" class="btn btn-sm btn-outline-primary fw-bold">Gem</button>
+                        </div>
+                        <div style="font-size:0.65rem; color: var(--text-muted); margin-top:4px;">
+                            {% if allowlist %}
+                                <i class="fa fa-info-circle me-1"></i> Kun disse numre vises på projektet — auto-match på kundenavn er deaktiveret.
+                            {% else %}
+                                Tom = auto-match på kundenavn (kan trække fakturaer fra andre projekter til samme kunde med).
+                            {% endif %}
+                        </div>
+                    </form>
 
                     <!-- Produktlinjer fra tilbud (med kostpris-budget) -->
                     <div class="d-flex justify-content-between align-items-center mt-3 mb-2">

@@ -1046,6 +1046,7 @@ def admin_panel():
         for t in vundne.values()
     )
     faktureringsopgaver = _beregn_faktureringsopgaver(idag)
+    alle_opgaver        = _alle_aabne_opgaver(all_data, idag)
 
     # --- Aggregér pr. projekt fra de allerede-hentede Dinero-data ---
     dinero_salg_per_proj      = {}  # PROJ-XXX → sum (DKK)
@@ -1132,7 +1133,8 @@ def admin_panel():
                            now_date=now_date,
                            afventer_total=afventer_total,
                            vundne_ufaktureret=vundne_ufaktureret,
-                           faktureringsopgaver=faktureringsopgaver)
+                           faktureringsopgaver=faktureringsopgaver,
+                           alle_opgaver=alle_opgaver)
 
 
 @app.route('/admin/produkter', methods=['GET', 'POST'])
@@ -1452,6 +1454,47 @@ def _projekt_budget(tilbud):
     )
 
 
+def _opgave_frist_dt(o):
+    """Parse frist-dato (DD-MM-YYYY). Returnér datetime.max hvis tom/ugyldig så den ryger sidst i sortering."""
+    try:
+        return datetime.strptime(o.get('frist', ''), '%d-%m-%Y')
+    except Exception:
+        return datetime.max
+
+
+def _sorter_opgaver(opgaver):
+    """Sortér efter (færdig sidst, frist stigende). Tilføjer original_index så templates kan slette/toggle korrekt."""
+    indekseret = [{**o, 'original_index': i} for i, o in enumerate(opgaver)]
+    indekseret.sort(key=lambda o: (bool(o.get('faerdig')), _opgave_frist_dt(o)))
+    return indekseret
+
+
+def _alle_aabne_opgaver(all_data, idag):
+    """Saml ufærdige opgaver fra alle vundne, ikke-arkiverede projekter, sorteret efter frist."""
+    result = []
+    for tid, t in all_data.items():
+        if t.get('arkiveret') or t.get('slettet') or t.get('vundet') is not True:
+            continue
+        for idx, o in enumerate(t.get('projekt', {}).get('opgaver', [])):
+            if o.get('faerdig'):
+                continue
+            frist_dt = _opgave_frist_dt(o)
+            dage = (frist_dt - idag).days if frist_dt != datetime.max else None
+            result.append({
+                'tilbud_id': tid,
+                'index': idx,
+                'titel': o.get('titel', ''),
+                'frist': o.get('frist', ''),
+                'frist_sort': frist_dt,
+                'dage': dage,
+                'projekt_nummer': t.get('nummer'),
+                'projekt_kunde': t.get('kunde'),
+                'projekt_site': t.get('site'),
+            })
+    result.sort(key=lambda x: x['frist_sort'])
+    return result
+
+
 @app.route('/projekt/<tilbud_id>')
 def projekt_side(tilbud_id):
     if not session.get('logged_in'):
@@ -1463,7 +1506,10 @@ def projekt_side(tilbud_id):
         return redirect(url_for('admin_panel'))
 
     if 'projekt' not in t:
-        t['projekt'] = {"oprettet": datetime.now().strftime('%d-%m-%Y'), "omkostninger": [], "noter": ""}
+        t['projekt'] = {"oprettet": datetime.now().strftime('%d-%m-%Y'), "omkostninger": [], "opgaver": [], "noter": ""}
+        save_data(TILBUD_FILE, all_data)
+    elif 'opgaver' not in t['projekt']:
+        t['projekt']['opgaver'] = []
         save_data(TILBUD_FILE, all_data)
 
     # Valutakurser til konvertering (alt samles i DKK for korrekt margin)
@@ -1533,8 +1579,11 @@ def projekt_side(tilbud_id):
     faktureret_total_dkk = faktureret_dkk + total_salg_dinero_dkk
     margin_dkk           = faktureret_total_dkk - total_omk_dkk
 
+    opgaver = _sorter_opgaver(t['projekt'].get('opgaver', []))
+
     return render_template('projekt.html',
                            t=t, id=tilbud_id,
+                           opgaver=opgaver,
                            budget=budget,                  # i projekt-valuta
                            budget_dkk=budget_dkk,
                            omk_budget_dkk=omk_budget_dkk,  # kostpris-budget (DKK)
@@ -1591,6 +1640,70 @@ def projekt_slet_omkostning(tilbud_id, index):
         if 0 <= index < len(omk):
             omk.pop(index)
         save_data(TILBUD_FILE, all_data)
+    return redirect(url_for('projekt_side', tilbud_id=tilbud_id))
+
+
+@app.route('/projekt/<tilbud_id>/opgave', methods=['POST'])
+def projekt_tilfoej_opgave(tilbud_id):
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+    all_data = load_data(TILBUD_FILE, {})
+    t = all_data.get(tilbud_id)
+    if not t or 'projekt' not in t:
+        return redirect(url_for('admin_panel'))
+
+    titel = (request.form.get('titel') or '').strip()
+    if not titel:
+        return redirect(url_for('projekt_side', tilbud_id=tilbud_id))
+
+    frist_raw = request.form.get('frist', '')
+    try:
+        frist = datetime.strptime(frist_raw, '%Y-%m-%d').strftime('%d-%m-%Y')
+    except ValueError:
+        frist = ''
+
+    t['projekt'].setdefault('opgaver', []).append({
+        "titel":    titel,
+        "frist":    frist,
+        "faerdig":  False,
+        "oprettet": datetime.now().strftime('%d-%m-%Y'),
+    })
+    save_data(TILBUD_FILE, all_data)
+    return redirect(url_for('projekt_side', tilbud_id=tilbud_id))
+
+
+@app.route('/projekt/<tilbud_id>/opgave/toggle/<int:index>')
+def projekt_toggle_opgave(tilbud_id, index):
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+    all_data = load_data(TILBUD_FILE, {})
+    t = all_data.get(tilbud_id)
+    if t and 'projekt' in t:
+        opgaver = t['projekt'].get('opgaver', [])
+        if 0 <= index < len(opgaver):
+            opgaver[index]['faerdig'] = not opgaver[index].get('faerdig', False)
+            save_data(TILBUD_FILE, all_data)
+
+    redir = request.args.get('redir', 'projekt')
+    if redir == 'admin':
+        return redirect(url_for('admin_panel'))
+    return redirect(url_for('projekt_side', tilbud_id=tilbud_id))
+
+
+@app.route('/projekt/<tilbud_id>/opgave/slet/<int:index>')
+def projekt_slet_opgave(tilbud_id, index):
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+    all_data = load_data(TILBUD_FILE, {})
+    t = all_data.get(tilbud_id)
+    if t and 'projekt' in t:
+        opgaver = t['projekt'].get('opgaver', [])
+        if 0 <= index < len(opgaver):
+            opgaver.pop(index)
+            save_data(TILBUD_FILE, all_data)
     return redirect(url_for('projekt_side', tilbud_id=tilbud_id))
 
 

@@ -194,8 +194,64 @@
 
         <div class="row g-4">
 
-            <!-- ── VENSTRE: Faktureringsopgaver ── -->
+            <!-- ── VENSTRE: Opgaver + Faktureringsopgaver ── -->
             <div class="col-lg-4">
+
+                <!-- Projektopgaver -->
+                <div class="card p-4">
+                    <div class="fw-bold mb-1" style="color: var(--accent); font-size:0.95rem;">
+                        <i class="fa fa-check-square-o me-1" style="color:#3b82f6;"></i> Projektopgaver
+                    </div>
+                    <div class="small mb-3" style="color: var(--text-muted);">
+                        {{ alle_opgaver|length }} åbne opgaver på tværs af projekter
+                    </div>
+
+                    {% if alle_opgaver %}
+                    {% for o in alle_opgaver %}
+                    {% if o.dage is none %}{% set cls = 'normal' %}
+                    {% elif o.dage <= 0 %}{% set cls = 'haster' %}
+                    {% elif o.dage <= 3 %}{% set cls = 'haster' %}
+                    {% elif o.dage <= 14 %}{% set cls = 'snart' %}
+                    {% else %}{% set cls = 'normal' %}{% endif %}
+                    <div class="opgave-item {{ cls }}">
+                        <div class="d-flex justify-content-between align-items-start gap-1">
+                            <div style="min-width:0;">
+                                <div style="font-size:0.75rem; font-weight:600; color:var(--text-dark);" class="text-truncate">
+                                    {{ o.titel }}
+                                </div>
+                                <div style="font-size:0.68rem; color: var(--text-muted);">
+                                    #{{ o.projekt_nummer }} – {{ o.projekt_kunde }}{% if o.projekt_site %} · {{ o.projekt_site }}{% endif %}
+                                </div>
+                                <div style="font-size:0.68rem; color: var(--text-muted);">
+                                    {% if o.frist %}Frist {{ o.frist }}
+                                        {% if o.dage is not none %}
+                                            {% if o.dage < 0 %}<span style="color:#dc2626;"> · {{ -o.dage }} dage forsinket</span>
+                                            {% elif o.dage == 0 %}<span style="color:#dc2626;"> · I dag</span>
+                                            {% elif o.dage <= 3 %}<span style="color:#dc2626;"> · {{ o.dage }} dage</span>
+                                            {% elif o.dage <= 14 %}<span style="color:#f59e0b;"> · {{ o.dage }} dage</span>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% else %}Ingen frist{% endif %}
+                                </div>
+                            </div>
+                            <div class="d-flex flex-column gap-1 flex-shrink-0">
+                                <a href="/projekt/{{ o.tilbud_id }}/opgave/toggle/{{ o.index }}?redir=admin"
+                                   class="btn btn-xs btn-outline-success" title="Markér som færdig">✓</a>
+                                <a href="/projekt/{{ o.tilbud_id }}" class="btn btn-xs btn-outline-secondary"
+                                   style="font-size:0.65rem;">Gå til</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center py-4" style="color: var(--text-muted);">
+                        <i class="fa fa-check-circle fa-2x mb-2 d-block" style="color:#22c55e;"></i>
+                        <div class="small fw-bold">Ingen åbne opgaver</div>
+                        <div class="small">Du er ajour</div>
+                    </div>
+                    {% endif %}
+                </div>
+
                 <div class="card p-4">
                     <div class="fw-bold mb-1" style="color: var(--accent); font-size:0.95rem;">
                         <i class="fa fa-bell-o me-1" style="color:#f59e0b;"></i> Faktureringsopgaver

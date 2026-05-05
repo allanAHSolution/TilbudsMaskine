@@ -178,9 +178,14 @@
                                                    title="Intern kostpris — vises ikke på kundetilbud">
                                         </div>
                                     </div>
-                                    <input type="text" name="p_beskrivelse" class="form-control form-control-sm desc-input"
-                                           placeholder="Linje beskrivelse (valgfri)..."
-                                           value="{{ p.beskrivelse if p.beskrivelse else '' }}">
+                                    <div class="d-flex justify-content-between align-items-center gap-2">
+                                        <input type="text" name="p_beskrivelse" class="form-control form-control-sm desc-input flex-grow-1"
+                                               placeholder="Linje beskrivelse (valgfri)..."
+                                               value="{{ p.beskrivelse if p.beskrivelse else '' }}">
+                                        <span class="kost-total-badge" style="background:#fef3c7; color:#92400e; font-weight:700; font-size:0.7rem; padding:3px 10px; border-radius:6px; white-space:nowrap;">
+                                            I alt: <span class="kost-total-val">0</span> DKK
+                                        </span>
+                                    </div>
                                 </div>
                                 {% endfor %}
                             {% else %}
@@ -213,8 +218,13 @@
                                                    title="Intern kostpris — vises ikke på kundetilbud">
                                         </div>
                                     </div>
-                                    <input type="text" name="p_beskrivelse" class="form-control form-control-sm desc-input"
-                                           placeholder="Linje beskrivelse (valgfri)...">
+                                    <div class="d-flex justify-content-between align-items-center gap-2">
+                                        <input type="text" name="p_beskrivelse" class="form-control form-control-sm desc-input flex-grow-1"
+                                               placeholder="Linje beskrivelse (valgfri)...">
+                                        <span class="kost-total-badge" style="background:#fef3c7; color:#92400e; font-weight:700; font-size:0.7rem; padding:3px 10px; border-radius:6px; white-space:nowrap;">
+                                            I alt: <span class="kost-total-val">0</span> DKK
+                                        </span>
+                                    </div>
                                 </div>
                             {% endif %}
                         </div>
@@ -223,6 +233,16 @@
                                 style="color: var(--accent); font-size:0.8rem;" onclick="nyLinje()">
                             <i class="fa fa-plus me-1"></i> Tilføj vare
                         </button>
+
+                        <!-- ── Samlet kostpris ── -->
+                        <div class="d-flex justify-content-end mt-2 mb-1">
+                            <div class="p-2 rounded" style="background:#fef3c7; border:1px solid #fde68a; min-width: 240px;">
+                                <div class="d-flex justify-content-between align-items-center" style="font-size:0.85rem;">
+                                    <span style="color:#92400e; font-weight:700;">Samlet kostpris</span>
+                                    <span style="color:#92400e; font-weight:800;"><span id="kost-sum-total">0</span> DKK</span>
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- ── Fragt ── -->
                         <div class="d-flex align-items-center gap-2 mt-3 mb-2">
@@ -292,6 +312,26 @@
     function fmtPris(n) {
         return Math.round(n).toLocaleString('da-DK');
     }
+    // Parser dansk-formaterede tal: "12.345" → 12345, "12.345,50" → 12345.50, "12345" → 12345
+    function parsePris(s) {
+        if (s == null) return 0;
+        const cleaned = String(s).replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
+        const n = parseFloat(cleaned);
+        return isNaN(n) ? 0 : n;
+    }
+    function opdaterKostpriser() {
+        let total = 0;
+        document.querySelectorAll('.line-item').forEach(li => {
+            const antal    = parsePris(li.querySelector('[name="p_antal"]')?.value);
+            const kostpris = parsePris(li.querySelector('[name="p_kostpris"]')?.value);
+            const linje    = antal * kostpris;
+            total += linje;
+            const out = li.querySelector('.kost-total-val');
+            if (out) out.textContent = fmtPris(linje);
+        });
+        const sumEl = document.getElementById('kost-sum-total');
+        if (sumEl) sumEl.textContent = fmtPris(total);
+    }
     // Når valuta ændres: konverter alle linjepriser fra deres oprindelige DKK-pris
     function opdaterAllePriser() {
         const valuta = aktivValuta();
@@ -333,15 +373,24 @@
                                title="Intern kostpris — vises ikke på kundetilbud">
                     </div>
                 </div>
-                <input type="text" name="p_beskrivelse" class="form-control form-control-sm desc-input"
-                       placeholder="Linje beskrivelse (valgfri)...">
+                <div class="d-flex justify-content-between align-items-center gap-2">
+                    <input type="text" name="p_beskrivelse" class="form-control form-control-sm desc-input flex-grow-1"
+                           placeholder="Linje beskrivelse (valgfri)...">
+                    <span class="kost-total-badge" style="background:#fef3c7; color:#92400e; font-weight:700; font-size:0.7rem; padding:3px 10px; border-radius:6px; white-space:nowrap;">
+                        I alt: <span class="kost-total-val">0</span> DKK
+                    </span>
+                </div>
             </div>`;
         list.insertAdjacentHTML('beforeend', html);
+        opdaterKostpriser();
     }
 
     function fjernLinje(btn) {
         const item = btn.closest('.line-item');
-        if (document.querySelectorAll('.line-item').length > 1) item.remove();
+        if (document.querySelectorAll('.line-item').length > 1) {
+            item.remove();
+            opdaterKostpriser();
+        }
     }
 
     function toggleProduktListe(btn) {
@@ -393,9 +442,14 @@
             }
         }
         wrapper.querySelector('.produkt-valglist').style.display = 'none';
+        opdaterKostpriser();
     }
 
     document.addEventListener('input', function(e) {
+        if (e.target.name === 'p_antal' || e.target.name === 'p_kostpris') {
+            opdaterKostpriser();
+            return;
+        }
         if (e.target.name !== 'p_navn') return;
         const wrapper = e.target.closest('.position-relative');
         if (!wrapper) return;
@@ -406,6 +460,9 @@
             el.style.display = el.querySelector('.fw-bold')?.textContent.toLowerCase().includes(query) ? '' : 'none';
         });
     });
+
+    // Initial beregning når siden er klar (vigtigt for rediger-mode hvor felter er prefilled)
+    document.addEventListener('DOMContentLoaded', opdaterKostpriser);
 
     document.addEventListener('click', function(e) {
         if (!e.target.closest('.position-relative')) {

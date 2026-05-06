@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toldfakturaer #{{ t.nummer }} | AhSolution ERP</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/font-awesome.min.css">
+    <style>
+        :root {
+            --accent: #1e325a;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+        body { background:#f4f7f9; color:var(--text-dark); font-family:'Inter',system-ui,sans-serif; padding-bottom:60px; }
+        .navbar { background:#fff; border-bottom:1px solid var(--border); padding:16px 0; }
+        .navbar-brand img { height:48px; }
+        .card { background:#fff; border:1px solid var(--border); border-radius:12px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.04); }
+        .told-item {
+            border:1px solid var(--border);
+            border-left:4px solid var(--accent);
+            border-radius:8px;
+            padding:14px 16px;
+            margin-bottom:10px;
+            background:white;
+            transition: box-shadow 0.15s;
+        }
+        .told-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.07); }
+        .btn-xs { padding: 0.15rem 0.5rem; font-size: 0.72rem; line-height: 1.4; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar sticky-top mb-4">
+    <div class="container d-flex justify-content-between align-items-center">
+        <a href="/" class="navbar-brand"><img src="/static/logo.png" alt="AhSolution"></a>
+        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:2px;color:var(--accent);font-weight:700;" class="d-none d-md-block">Toldfakturaer</div>
+        <div class="d-flex gap-2">
+            <a href="/projekt/{{ id }}" class="btn btn-sm btn-outline-secondary"><i class="fa fa-arrow-left me-1"></i> Tilbage til projekt</a>
+            <a href="/admin" class="btn btn-sm btn-outline-secondary">Dashboard</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container" style="max-width: 920px;">
+    <div class="card p-4">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+                <div class="fw-bold" style="color:var(--accent); font-size:1.2rem;">
+                    Toldfakturaer — Tilbud #{{ t.nummer }}
+                </div>
+                <div class="small" style="color: var(--text-muted);">
+                    {{ t.kunde }}{% if t.site %} · {{ t.site }}{% endif %} · {{ t.valuta }}
+                </div>
+            </div>
+            <a href="/toldfaktura/{{ id }}/ny" class="btn btn-primary fw-bold" style="background:var(--accent); border-color:var(--accent);">
+                <i class="fa fa-plus me-1"></i> Ny toldfaktura
+            </a>
+        </div>
+
+        {% if toldfakturaer %}
+            {% set antal_produkter = (t.produkter|default([]))|length %}
+            {% for told in toldfakturaer %}
+            {% set valgte = told.valgte_indekser %}
+            {% set er_alle = (valgte is none) %}
+            {% set antal_valgt = antal_produkter if er_alle else (valgte|length) %}
+            <div class="told-item">
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                    <div style="min-width:0;">
+                        <div class="fw-bold" style="font-size:0.95rem;">
+                            {% if told.titel %}{{ told.titel }}{% else %}Toldfaktura{% endif %}
+                            <span class="badge ms-1" style="background:#dbeafe; color:#1e40af; font-size:0.62rem; font-weight:600;">
+                                Nr. {{ told.faktura_nr or t.nummer }}
+                            </span>
+                        </div>
+                        <div class="small mt-1" style="color: var(--text-muted); font-size:0.78rem;">
+                            <i class="fa fa-globe me-1"></i> {{ told.oprindelsesland or 'Danmark' }} → {{ told.importoer.land_kode or 'NO' }}
+                            · <i class="fa fa-cube ms-1 me-1"></i> {{ antal_valgt }}/{{ antal_produkter }} produktlinjer
+                            {% if told.fragt_beloeb and told.fragt_beloeb|float > 0 %}
+                                · <i class="fa fa-truck ms-1 me-1"></i> Fragt {{ "{:,.0f}".format(told.fragt_beloeb|float) }} {{ told.fragt_valuta }}
+                            {% endif %}
+                        </div>
+                        <div class="small" style="color: var(--text-muted); font-size:0.7rem;">
+                            Oprettet {{ told.oprettet }}{% if told.ret_dato and told.ret_dato != told.oprettet %} · sidst rettet {{ told.ret_dato }}{% endif %}
+                        </div>
+                    </div>
+                    <div class="d-flex gap-1 flex-shrink-0">
+                        <a href="/toldfaktura/{{ id }}/pdf/{{ told.id }}" class="btn btn-xs fw-bold" style="background:var(--accent); color:white;">
+                            <i class="fa fa-file-pdf-o"></i> PDF
+                        </a>
+                        <a href="/toldfaktura/{{ id }}/ret/{{ told.id }}" class="btn btn-xs btn-outline-primary">Ret</a>
+                        <a href="/toldfaktura/{{ id }}/slet/{{ told.id }}"
+                           onclick="return confirm('Slet denne toldfaktura?')"
+                           class="btn btn-xs btn-outline-danger">✕</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="text-center py-5" style="color: var(--text-muted);">
+                <i class="fa fa-file-pdf-o fa-2x mb-2 d-block" style="color:#cbd5e1;"></i>
+                <div class="small fw-bold">Ingen toldfakturaer endnu</div>
+                <div class="small">Opret en for at generere en PDF til DK→NO eksport</div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

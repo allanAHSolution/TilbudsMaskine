@@ -472,10 +472,108 @@ def generer_pdf(tilbud, doc_type="tilbud"):
     return filepath, filename
 
 
+def _toldfaktura_default(tilbud, importoer=None):
+    """Default-værdier til en ny toldfaktura, brugt før første gemning."""
+    imp = importoer or {}
+    return {
+        "id":              str(uuid.uuid4()),
+        "oprettet":        datetime.now().strftime('%d-%m-%Y'),
+        "ret_dato":        datetime.now().strftime('%d-%m-%Y'),
+        "titel":           "",
+        "faktura_nr":      str(tilbud.get('nummer', '')),
+        "oprindelsesland": "Danmark",
+        "fragt_beloeb":    0.0,
+        "fragt_valuta":    tilbud.get('valuta', 'NOK'),
+        "importoer": {
+            "navn":          imp.get('navn') or tilbud.get('kunde', ''),
+            "adresse_linje": imp.get('adresse_linje', ''),
+            "postnr":        imp.get('postnr', ''),
+            "by":            imp.get('by', ''),
+            "land_kode":     imp.get('land_kode', 'NO'),
+            "vat_nr":        imp.get('vat_nr', ''),
+            "att":           imp.get('att', '') or tilbud.get('att', ''),
+        },
+        "lev_anderledes":   False,
+        "leveringsadresse": {},
+        "valgte_indekser":  None,  # None = alle produktlinjer
+    }
+
+
+def _saml_toldfaktura_fra_form(form, tilbud, importoer_default):
+    """Bygger en toldfaktura-record ud fra formdata. Bruges af gem-routes."""
+    valgte_raw = form.getlist('valgt_idx')
+    if valgte_raw:
+        try:
+            valgte = sorted(set(int(x) for x in valgte_raw))
+        except ValueError:
+            valgte = None
+        # Hvis alle markeret er det samme som None (alle)
+        if valgte is not None and len(valgte) == len(tilbud.get('produkter', [])):
+            valgte = None
+    else:
+        valgte = []  # ingen markeret → tom liste (PDF bliver tom)
+
+    importoer = {
+        "navn":          form.get('imp_navn', '').strip() or (importoer_default.get('navn') or tilbud.get('kunde', '')),
+        "adresse_linje": form.get('imp_adresse', '').strip(),
+        "postnr":        form.get('imp_postnr', '').strip(),
+        "by":            form.get('imp_by', '').strip(),
+        "land_kode":     form.get('imp_land', 'NO').strip().upper() or 'NO',
+        "vat_nr":        form.get('imp_vat', '').strip(),
+        "att":           form.get('imp_att', '').strip(),
+    }
+
+    lev_anderledes = form.get('lev_anderledes') == 'on'
+    leveringsadresse = {}
+    if lev_anderledes:
+        leveringsadresse = {
+            "navn":          form.get('lev_navn', '').strip(),
+            "adresse_linje": form.get('lev_adresse', '').strip(),
+            "postnr":        form.get('lev_postnr', '').strip(),
+            "by":            form.get('lev_by', '').strip(),
+            "att":           form.get('lev_att', '').strip(),
+        }
+
+    return {
+        "titel":            form.get('titel', '').strip(),
+        "faktura_nr":       form.get('faktura_nr', '').strip() or str(tilbud.get('nummer', '')),
+        "oprindelsesland":  form.get('oprindelsesland', 'Danmark').strip() or 'Danmark',
+        "fragt_beloeb":     _f(form.get('fragt_beloeb')),
+        "fragt_valuta":     form.get('fragt_valuta') or tilbud.get('valuta', 'NOK'),
+        "importoer":        importoer,
+        "lev_anderledes":   lev_anderledes,
+        "leveringsadresse": leveringsadresse,
+        "valgte_indekser":  valgte,
+        "ret_dato":         datetime.now().strftime('%d-%m-%Y'),
+    }
+
+
+def _leveringsadresse_til_pdf(told, tilbud):
+    """Beregn endelig leveringsadresse: enten manuel (lev_anderledes), ellers fra importør+site."""
+    if told.get('lev_anderledes') and told.get('leveringsadresse'):
+        return told['leveringsadresse']
+    imp = told.get('importoer', {})
+    site = (tilbud.get('site') or '').strip()
+    return {
+        'navn':          (imp.get('navn', '') + (' — ' + site if site else '')),
+        'adresse_linje': imp.get('adresse_linje', ''),
+        'postnr':        imp.get('postnr', ''),
+        'by':            imp.get('by', ''),
+        'att':           imp.get('att', ''),
+    }
+
+
 def generer_toldfaktura_pdf(tilbud, fragt_beloeb=0.0, fragt_valuta=None,
                              oprindelsesland="Danmark",
                              importoer=None, leveringsadresse=None,
-                             faktura_nr=None, faktura_dato=None):
+                             faktura_nr=None, faktura_dato=None,
+                             valgte_indekser=None):
+    """Genererer toldfaktura-PDF.
+
+    valgte_indekser: liste af indekser i tilbud.produkter — hvis sat,
+    medtages kun disse linjer (bruges til at splitte fx DK-varer og
+    Kina-varer på separate toldfakturaer). None = alle produktlinjer.
+    """
     BLUE      = (30, 50, 90)
     GREY_ROW  = (245, 247, 250)
     GREY_TEXT = (90, 90, 95)
@@ -584,7 +682,10 @@ def generer_toldfaktura_pdf(tilbud, fragt_beloeb=0.0, fragt_valuta=None,
                    for p in load_data(PRODUKTER_FILE, [])}
 
     total_sum = 0.0
+    valgte_set = set(valgte_indekser) if valgte_indekser is not None else None
     for i, p in enumerate(tilbud.get('produkter', [])):
+        if valgte_set is not None and i not in valgte_set:
+            continue
         antal = _f(p.get('antal', 1), 1)
         pris  = _f(p.get('pris', 0))
         linje_total = antal * pris
@@ -1319,7 +1420,9 @@ def opret_tilbud():
         all_data[eksisterende_id].update(faelles_felter)
         tilbud = all_data[eksisterende_id]
     else:
-        # Nyt tilbud
+        # Nyt tilbud — kan være et selvstændigt tilbud eller et ekstra tilbud (child) på et eksisterende projekt
+        parent_id = (request.form.get('parent_id') or '').strip()
+        er_ekstra = parent_id and parent_id in all_data
         tilbud_id = str(uuid.uuid4())
         nummer = get_next_nummer()
         tilbud = {
@@ -1327,8 +1430,10 @@ def opret_tilbud():
             "nummer": nummer,
             "dato": datetime.now().strftime('%d-%m-%Y'),
             "arkiveret": False,
-            "vundet": None,
+            # Ekstra tilbud markeres automatisk som vundet (de er en del af et eksisterende projekt)
+            "vundet": True if er_ekstra else None,
             "slettet": False,
+            "parent_id": parent_id if er_ekstra else None,
             **faelles_felter
         }
         all_data[tilbud_id] = tilbud
@@ -1353,18 +1458,8 @@ def download_pdf(tilbud_id, doc_type):
     return send_file(filepath, as_attachment=True, download_name=filename)
 
 
-@app.route('/toldfaktura/<tilbud_id>', methods=['GET', 'POST'])
-def toldfaktura(tilbud_id):
-    """Form til toldfaktura: hent importør fra Dinero + valgfri manuel leveringsadresse."""
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-
-    all_data = load_data(TILBUD_FILE, {})
-    tilbud = all_data.get(tilbud_id)
-    if not tilbud:
-        return "Tilbud ikke fundet", 404
-
-    # Hent importør fra Dinero (auto-udfyld)
+def _hent_importoer(tilbud):
+    """Hent importør-info fra Dinero med fallback til tilbuddets kunde."""
     importoer = None
     if DINERO_OK and tilbud.get('kunde'):
         try:
@@ -1373,53 +1468,136 @@ def toldfaktura(tilbud_id):
             importoer = None
     if not importoer:
         importoer = {'navn': tilbud.get('kunde', ''), 'land_kode': 'NO'}
+    return importoer
 
-    if request.method == 'POST':
-        fragt_beloeb = _f(request.form.get('fragt_beloeb', 0))
-        fragt_valuta = request.form.get('fragt_valuta') or tilbud.get('valuta', 'NOK')
-        oprindelse   = request.form.get('oprindelsesland', 'Danmark')
-        faktura_nr   = (request.form.get('faktura_nr') or '').strip() or None
 
-        # Importør (kan have rettet vat_nr i form'en)
-        importoer_data = {
-            'navn':          request.form.get('imp_navn',   importoer.get('navn', '')),
-            'adresse_linje': request.form.get('imp_adresse', importoer.get('adresse_linje', '')),
-            'postnr':        request.form.get('imp_postnr', importoer.get('postnr', '')),
-            'by':            request.form.get('imp_by',     importoer.get('by', '')),
-            'land_kode':     request.form.get('imp_land',   importoer.get('land_kode', 'NO')),
-            'vat_nr':        request.form.get('imp_vat',    importoer.get('vat_nr', '')),
-            'att':           request.form.get('imp_att',    importoer.get('att', '') or tilbud.get('att', '')),
-        }
+@app.route('/toldfaktura/<tilbud_id>')
+def toldfaktura_liste(tilbud_id):
+    """Liste over toldfakturaer på et tilbud. Tom liste = vis 'opret ny'-knap."""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    all_data = load_data(TILBUD_FILE, {})
+    tilbud = all_data.get(tilbud_id)
+    if not tilbud:
+        return "Tilbud ikke fundet", 404
+    toldfakturaer = tilbud.get('toldfakturaer', [])
+    return render_template('toldfaktura_liste.html',
+                           t=tilbud, id=tilbud_id,
+                           toldfakturaer=toldfakturaer)
 
-        # Leveringsadresse: kun hvis checkbox er sat — ellers tom (PDF udfylder med info fra tilbud.site)
-        leverings_data = None
-        if request.form.get('lev_anderledes') == 'on':
-            leverings_data = {
-                'navn':          request.form.get('lev_navn', ''),
-                'adresse_linje': request.form.get('lev_adresse', ''),
-                'postnr':        request.form.get('lev_postnr', ''),
-                'by':            request.form.get('lev_by', ''),
-                'att':           request.form.get('lev_att', ''),
-            }
+
+@app.route('/toldfaktura/<tilbud_id>/ny')
+def toldfaktura_ny(tilbud_id):
+    """Vis blank form til ny toldfaktura."""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    all_data = load_data(TILBUD_FILE, {})
+    tilbud = all_data.get(tilbud_id)
+    if not tilbud:
+        return "Tilbud ikke fundet", 404
+    importoer = _hent_importoer(tilbud)
+    told = _toldfaktura_default(tilbud, importoer)
+    return render_template('toldfaktura_form.html',
+                           t=tilbud, id=tilbud_id, importoer=importoer,
+                           told=told, told_id=None, er_ny=True)
+
+
+@app.route('/toldfaktura/<tilbud_id>/ret/<told_id>')
+def toldfaktura_ret(tilbud_id, told_id):
+    """Vis form til redigering af eksisterende toldfaktura."""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    all_data = load_data(TILBUD_FILE, {})
+    tilbud = all_data.get(tilbud_id)
+    if not tilbud:
+        return "Tilbud ikke fundet", 404
+    told = next((x for x in tilbud.get('toldfakturaer', []) if x.get('id') == told_id), None)
+    if not told:
+        return redirect(url_for('toldfaktura_liste', tilbud_id=tilbud_id))
+    importoer = _hent_importoer(tilbud)
+    return render_template('toldfaktura_form.html',
+                           t=tilbud, id=tilbud_id, importoer=importoer,
+                           told=told, told_id=told_id, er_ny=False)
+
+
+@app.route('/toldfaktura/<tilbud_id>/gem', methods=['POST'])
+@app.route('/toldfaktura/<tilbud_id>/gem/<told_id>', methods=['POST'])
+def toldfaktura_gem(tilbud_id, told_id=None):
+    """Gem ny eller eksisterende toldfaktura. Redirect til list-view."""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+    all_data = load_data(TILBUD_FILE, {})
+    tilbud = all_data.get(tilbud_id)
+    if not tilbud:
+        return "Tilbud ikke fundet", 404
+
+    importoer_default = _hent_importoer(tilbud)
+    payload = _saml_toldfaktura_fra_form(request.form, tilbud, importoer_default)
+
+    tilbud.setdefault('toldfakturaer', [])
+    if told_id:
+        # Opdater eksisterende
+        for x in tilbud['toldfakturaer']:
+            if x.get('id') == told_id:
+                x.update(payload)
+                break
         else:
-            # Default: brug tilbud.site som modtager-navn + importør-adresse
-            site = tilbud.get('site', '').strip()
-            leverings_data = {
-                'navn':          (importoer_data['navn'] + (' — ' + site if site else '')),
-                'adresse_linje': importoer_data.get('adresse_linje', ''),
-                'postnr':        importoer_data.get('postnr', ''),
-                'by':            importoer_data.get('by', ''),
-                'att':           importoer_data.get('att', ''),
-            }
+            return redirect(url_for('toldfaktura_liste', tilbud_id=tilbud_id))
+        save_id = told_id
+    else:
+        # Opret ny
+        ny = _toldfaktura_default(tilbud, importoer_default)
+        ny.update(payload)
+        tilbud['toldfakturaer'].append(ny)
+        save_id = ny['id']
 
-        filepath, filename = generer_toldfaktura_pdf(
-            tilbud, fragt_beloeb, fragt_valuta, oprindelse,
-            importoer=importoer_data, leveringsadresse=leverings_data,
-            faktura_nr=faktura_nr,
-        )
-        return send_file(filepath, as_attachment=True, download_name=filename)
+    save_data(TILBUD_FILE, all_data)
 
-    return render_template('toldfaktura_form.html', t=tilbud, id=tilbud_id, importoer=importoer)
+    # Hvis brugeren trykkede "Gem og hent PDF" — generer + download
+    if request.form.get('gem_og_hent_pdf') == '1':
+        return redirect(url_for('toldfaktura_pdf', tilbud_id=tilbud_id, told_id=save_id))
+    return redirect(url_for('toldfaktura_liste', tilbud_id=tilbud_id))
+
+
+@app.route('/toldfaktura/<tilbud_id>/pdf/<told_id>')
+def toldfaktura_pdf(tilbud_id, told_id):
+    """Generer + download PDF for en gemt toldfaktura."""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    all_data = load_data(TILBUD_FILE, {})
+    tilbud = all_data.get(tilbud_id)
+    if not tilbud:
+        return "Tilbud ikke fundet", 404
+    told = next((x for x in tilbud.get('toldfakturaer', []) if x.get('id') == told_id), None)
+    if not told:
+        return redirect(url_for('toldfaktura_liste', tilbud_id=tilbud_id))
+
+    leveringsadresse = _leveringsadresse_til_pdf(told, tilbud)
+    filepath, filename = generer_toldfaktura_pdf(
+        tilbud,
+        fragt_beloeb=_f(told.get('fragt_beloeb')),
+        fragt_valuta=told.get('fragt_valuta'),
+        oprindelsesland=told.get('oprindelsesland', 'Danmark'),
+        importoer=told.get('importoer'),
+        leveringsadresse=leveringsadresse,
+        faktura_nr=told.get('faktura_nr') or None,
+        valgte_indekser=told.get('valgte_indekser'),
+    )
+    return send_file(filepath, as_attachment=True, download_name=filename)
+
+
+@app.route('/toldfaktura/<tilbud_id>/slet/<told_id>')
+def toldfaktura_slet(tilbud_id, told_id):
+    """Slet en toldfaktura."""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    all_data = load_data(TILBUD_FILE, {})
+    tilbud = all_data.get(tilbud_id)
+    if tilbud and tilbud.get('toldfakturaer'):
+        tilbud['toldfakturaer'] = [x for x in tilbud['toldfakturaer'] if x.get('id') != told_id]
+        save_data(TILBUD_FILE, all_data)
+    return redirect(url_for('toldfaktura_liste', tilbud_id=tilbud_id))
 
 
 @app.route('/status/<tilbud_id>/<status>')
@@ -1476,6 +1654,35 @@ def _projekt_budget(tilbud):
         _f(p.get('antal', 1), 1) * _f(p.get('pris', 0))
         for p in tilbud.get('produkter', [])
     )
+
+
+def _projekt_rod_id(all_data, tilbud_id):
+    """Returnér roden af projekt-træet (parent uden parent). Bruges til at gruppere ekstra tilbud."""
+    seen = set()
+    cur = tilbud_id
+    while cur and cur not in seen:
+        seen.add(cur)
+        t = all_data.get(cur)
+        if not t:
+            return cur
+        pid = t.get('parent_id')
+        if not pid or pid not in all_data:
+            return cur
+        cur = pid
+    return cur
+
+
+def _projekt_soeskende(all_data, tilbud_id):
+    """Returnér liste af alle tilbud i samme projekt-gruppe (root + children) ordnet efter nummer."""
+    rod = _projekt_rod_id(all_data, tilbud_id)
+    medlemmer = []
+    for tid, t in all_data.items():
+        if t.get('slettet'):
+            continue
+        if tid == rod or t.get('parent_id') == rod:
+            medlemmer.append((tid, t))
+    medlemmer.sort(key=lambda x: x[1].get('nummer') or 0)
+    return rod, medlemmer
 
 
 def _opgave_frist_dt(o):
@@ -1628,9 +1835,17 @@ def projekt_side(tilbud_id):
 
     opgaver = _sorter_opgaver(t['projekt'].get('opgaver', []))
 
+    # Find søskende-tilbud (samme projekt-gruppe) — vises kun hvis der er mere end ét tilbud
+    rod_id, soeskende = _projekt_soeskende(all_data, tilbud_id)
+    relaterede = [(tid, st) for tid, st in soeskende if tid != tilbud_id]
+    er_rod = (rod_id == tilbud_id)
+
     return render_template('projekt.html',
                            t=t, id=tilbud_id,
                            opgaver=opgaver,
+                           relaterede_tilbud=relaterede,
+                           er_rod_tilbud=er_rod,
+                           rod_tilbud_id=rod_id,
                            budget=budget,                  # i projekt-valuta
                            budget_dkk=budget_dkk,
                            omk_budget_dkk=omk_budget_dkk,  # kostpris-budget (DKK)
@@ -1789,14 +2004,37 @@ def nyt_tilbud():
         return redirect(url_for('login'))
 
     rediger_id = request.args.get('rediger')
+    ekstra_id  = request.args.get('ekstra')  # parent_id for ekstra tilbud
     all_data = load_data(TILBUD_FILE, {})
     rediger_data = all_data.get(rediger_id) if rediger_id else None
     indstillinger = load_data(INDSTILLINGER_FILE, {"kurser": {"NOK": 0.63, "EUR": 7.46, "SEK": 0.67}})
     kurser = indstillinger.get("kurser", {"NOK": 0.63, "EUR": 7.46, "SEK": 0.67})
 
+    # Ekstra tilbud: forhånds-udfyld kunde/site/valuta fra parent men tom produktliste
+    ekstra_parent = None
+    forhaands_data = None
+    if ekstra_id and not rediger_data:
+        parent = all_data.get(ekstra_id)
+        if parent:
+            ekstra_parent = parent
+            forhaands_data = {
+                "kunde":       parent.get('kunde', ''),
+                "site":        parent.get('site', ''),
+                "att":         parent.get('att', ''),
+                "moms":        parent.get('moms', 'nej'),
+                "valuta":      parent.get('valuta', 'NOK'),
+                "betaling":    parent.get('betaling', '5050'),
+                "incoterm":    parent.get('incoterm', 'EXW'),
+                "intro_tekst": '',
+                "produkter":   [],
+            }
+
     return render_template('nyt_tilbud.html',
                            produkter=load_data(PRODUKTER_FILE, []),
                            rediger_data=rediger_data,
+                           forhaands_data=forhaands_data,
+                           ekstra_parent_id=ekstra_id if ekstra_parent else None,
+                           ekstra_parent=ekstra_parent,
                            kurser=kurser)
 
 

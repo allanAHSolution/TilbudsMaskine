@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Toldfaktura #{{ t.nummer }} | AhSolution ERP</title>
+    <title>{% if er_ny %}Ny toldfaktura{% else %}Ret toldfaktura{% endif %} #{{ t.nummer }} | AhSolution ERP</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/font-awesome.min.css">
     <style>
@@ -20,6 +20,16 @@
         .form-label-xs { font-size:0.65rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); font-weight:700; }
         .section-label { font-size:0.7rem; text-transform:uppercase; letter-spacing:1.5px; color:var(--accent); font-weight:700; margin-bottom:8px; }
         .dinero-badge { background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:4px; font-size:0.65rem; font-weight:700; }
+        .produkt-row {
+            border:1px solid var(--border);
+            border-radius:6px;
+            padding:8px 12px;
+            margin-bottom:6px;
+            background:white;
+            transition: background 0.1s;
+        }
+        .produkt-row.valgt { background:#f0fdf4; border-color:#86efac; }
+        .produkt-row label { cursor:pointer; margin-bottom:0; width:100%; }
     </style>
 </head>
 <body>
@@ -28,20 +38,34 @@
     <div class="container d-flex justify-content-between align-items-center">
         <a href="/" class="navbar-brand"><img src="/static/logo.png" alt="AhSolution"></a>
         <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:2px;color:var(--accent);font-weight:700;" class="d-none d-md-block">Toldfaktura</div>
-        <a href="/admin" class="btn btn-sm btn-outline-secondary"><i class="fa fa-arrow-left me-1"></i> Dashboard</a>
+        <div class="d-flex gap-2">
+            <a href="/toldfaktura/{{ id }}" class="btn btn-sm btn-outline-secondary"><i class="fa fa-arrow-left me-1"></i> Toldfaktura-liste</a>
+            <a href="/admin" class="btn btn-sm btn-outline-secondary">Dashboard</a>
+        </div>
     </div>
 </nav>
 
 <div class="container" style="max-width: 920px;">
     <div class="card p-4">
         <div class="fw-bold" style="color:var(--accent); font-size:1.2rem;">
-            Generer toldfaktura — #{{ t.nummer }}
+            {% if er_ny %}Ny toldfaktura{% else %}Ret toldfaktura{% endif %} — Tilbud #{{ t.nummer }}
         </div>
         <div class="small mb-4" style="color: var(--text-muted);">
-            {{ t.kunde }}{% if t.site %} · {{ t.site }}{% endif %} · DAP eksport DK → NO
+            {{ t.kunde }}{% if t.site %} · {{ t.site }}{% endif %} · DAP eksport
         </div>
 
-        <form method="POST" action="/toldfaktura/{{ id }}">
+        {% if er_ny %}
+        <form method="POST" action="/toldfaktura/{{ id }}/gem">
+        {% else %}
+        <form method="POST" action="/toldfaktura/{{ id }}/gem/{{ told_id }}">
+        {% endif %}
+
+            <!-- ── Titel (valgfri identifikator) ── -->
+            <div class="mb-3">
+                <label class="form-label-xs">Titel (valgfri — fx "DK-varer" eller "Kina-forsendelse")</label>
+                <input type="text" name="titel" class="form-control form-control-sm"
+                       value="{{ told.titel or '' }}" placeholder="Bruges til at skelne flere toldfakturaer på samme tilbud">
+            </div>
 
             <!-- ── Faktura-nummer + dato + fragt ── -->
             <div class="section-label">Faktura-information</div>
@@ -49,76 +73,115 @@
                 <div class="col-md-3">
                     <label class="form-label-xs">Faktura nr.</label>
                     <input type="text" name="faktura_nr" class="form-control form-control-sm"
-                           value="{{ t.nummer }}" placeholder="Auto">
+                           value="{{ told.faktura_nr or t.nummer }}" placeholder="Auto">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label-xs">Oprindelsesland</label>
-                    <input type="text" name="oprindelsesland" value="Danmark" class="form-control form-control-sm">
+                    <input type="text" name="oprindelsesland" value="{{ told.oprindelsesland or 'Danmark' }}" class="form-control form-control-sm">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label-xs">Fragt (DAP)</label>
                     <input type="number" step="0.01" name="fragt_beloeb" class="form-control form-control-sm"
-                           placeholder="0">
+                           value="{{ told.fragt_beloeb if told.fragt_beloeb else '' }}" placeholder="0">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label-xs">Valuta</label>
                     <select name="fragt_valuta" class="form-select form-select-sm">
-                        <option value="DKK" {{ 'selected' if t.valuta == 'DKK' }}>DKK</option>
-                        <option value="NOK" {{ 'selected' if t.valuta == 'NOK' }}>NOK</option>
-                        <option value="EUR" {{ 'selected' if t.valuta == 'EUR' }}>EUR</option>
-                        <option value="SEK" {{ 'selected' if t.valuta == 'SEK' }}>SEK</option>
+                        {% set fv = told.fragt_valuta or t.valuta %}
+                        <option value="DKK" {{ 'selected' if fv == 'DKK' }}>DKK</option>
+                        <option value="NOK" {{ 'selected' if fv == 'NOK' }}>NOK</option>
+                        <option value="EUR" {{ 'selected' if fv == 'EUR' }}>EUR</option>
+                        <option value="SEK" {{ 'selected' if fv == 'SEK' }}>SEK</option>
                     </select>
                 </div>
             </div>
 
-            <!-- ── Importør (auto-fyldt fra Dinero) ── -->
+            <!-- ── Produktvalg (subset) ── -->
             <div class="section-label mt-3">
-                Kunde / Importør
-                {% if importoer.vat_nr %}<span class="dinero-badge ms-2">FRA DINERO</span>{% endif %}
+                Produktlinjer på denne toldfaktura
+                <span class="float-end small" style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--text-muted);">
+                    <button type="button" class="btn btn-link btn-xs p-0 me-2" style="font-size:0.72rem;" onclick="markerAlle(true)">Marker alle</button>
+                    <button type="button" class="btn btn-link btn-xs p-0" style="font-size:0.72rem;" onclick="markerAlle(false)">Fjern alle</button>
+                </span>
             </div>
+            <div class="small mb-2" style="color: var(--text-muted);">
+                Vælg hvilke linjer der skal med på denne toldfaktura. Brug det fx til at splitte DK-varer og Kina-varer på to separate forsendelser.
+            </div>
+            {% set valgte = told.valgte_indekser %}
+            {% set er_alle = (valgte is none) %}
+            {% for p in t.produkter|default([]) %}
+            {% set er_valgt = er_alle or (loop.index0 in valgte) %}
+            <div class="produkt-row {{ 'valgt' if er_valgt else '' }}" data-row="{{ loop.index0 }}">
+                <label class="d-flex align-items-center gap-2">
+                    <input type="checkbox" name="valgt_idx" value="{{ loop.index0 }}"
+                           class="form-check-input m-0 valgt-cb" {{ 'checked' if er_valgt else '' }}
+                           onchange="opdaterVisning(this)">
+                    <div class="flex-grow-1" style="min-width:0;">
+                        <div class="fw-bold small">{{ p.navn }} × {{ p.antal }}</div>
+                        <div class="small" style="color: var(--text-muted); font-size:0.72rem;">
+                            {% set lt = (p.antal|float) * (p.pris|float) %}
+                            {% if (p.pris|float) > 0 %}
+                                {{ "{:,.0f}".format(lt) }} {{ t.valuta }}
+                            {% else %}
+                                Inkluderet
+                            {% endif %}
+                            {% if p.beskrivelse %} · {{ p.beskrivelse[:60] }}{% endif %}
+                        </div>
+                    </div>
+                </label>
+            </div>
+            {% endfor %}
+
+            <!-- ── Importør (auto-fyldt fra Dinero) ── -->
+            <div class="section-label mt-4">
+                Kunde / Importør
+                {% if importoer.vat_nr and er_ny %}<span class="dinero-badge ms-2">FRA DINERO</span>{% endif %}
+            </div>
+            {% set imp = told.importoer %}
             <div class="row g-2 mb-3">
                 <div class="col-md-6">
                     <label class="form-label-xs">Firmanavn</label>
                     <input type="text" name="imp_navn" class="form-control form-control-sm"
-                           value="{{ importoer.navn or t.kunde }}" required>
+                           value="{{ imp.navn or t.kunde }}" required>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label-xs">Adresse</label>
                     <input type="text" name="imp_adresse" class="form-control form-control-sm"
-                           value="{{ importoer.adresse_linje or '' }}">
+                           value="{{ imp.adresse_linje or '' }}">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label-xs">Postnr.</label>
                     <input type="text" name="imp_postnr" class="form-control form-control-sm"
-                           value="{{ importoer.postnr or '' }}">
+                           value="{{ imp.postnr or '' }}">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label-xs">By</label>
                     <input type="text" name="imp_by" class="form-control form-control-sm"
-                           value="{{ importoer.by or '' }}">
+                           value="{{ imp.by or '' }}">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label-xs">Land</label>
                     <input type="text" name="imp_land" class="form-control form-control-sm"
-                           value="{{ importoer.land_kode or 'NO' }}" maxlength="2">
+                           value="{{ imp.land_kode or 'NO' }}" maxlength="2">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label-xs">Org.nr / VAT</label>
                     <input type="text" name="imp_vat" class="form-control form-control-sm"
-                           value="{{ importoer.vat_nr or '' }}"
+                           value="{{ imp.vat_nr or '' }}"
                            placeholder="921757131" title="Norsk org.nr eller VAT-nr">
                 </div>
                 <div class="col-md-12">
                     <label class="form-label-xs">Att. person</label>
                     <input type="text" name="imp_att" class="form-control form-control-sm"
-                           value="{{ importoer.att or t.att or '' }}">
+                           value="{{ imp.att or t.att or '' }}">
                 </div>
             </div>
 
             <!-- ── Leveringsadresse (toggle) ── -->
             <div class="section-label mt-3">Leveringsadresse</div>
             <div class="form-check mb-2">
-                <input type="checkbox" class="form-check-input" id="lev_anderledes" name="lev_anderledes" onchange="toggleLevAdr()">
+                <input type="checkbox" class="form-check-input" id="lev_anderledes" name="lev_anderledes"
+                       {{ 'checked' if told.lev_anderledes }} onchange="toggleLevAdr()">
                 <label class="form-check-label small" for="lev_anderledes">
                     Leveringsadresse er anderledes end importør (fx specifik UNO-X site)
                 </label>
@@ -127,43 +190,53 @@
                 Standard: leveringsadressen er importørens adresse{% if t.site %} med "<strong>{{ t.site }}</strong>" som site-navn{% endif %}.
             </div>
 
-            <div id="lev_form" class="row g-2 mb-3" style="display:none;">
+            {% set lev = told.leveringsadresse or {} %}
+            <div id="lev_form" class="row g-2 mb-3" style="display:{{ '' if told.lev_anderledes else 'none' }};">
                 <div class="col-md-6">
                     <label class="form-label-xs">Modtager-navn (typisk site)</label>
                     <input type="text" name="lev_navn" class="form-control form-control-sm"
-                           value="{{ t.kunde }}{% if t.site %} {{ t.site }}{% endif %}">
+                           value="{{ lev.navn or (t.kunde + (' ' + t.site if t.site else '')) }}">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label-xs">Adresse</label>
-                    <input type="text" name="lev_adresse" class="form-control form-control-sm">
+                    <input type="text" name="lev_adresse" class="form-control form-control-sm"
+                           value="{{ lev.adresse_linje or '' }}">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label-xs">Postnr.</label>
-                    <input type="text" name="lev_postnr" class="form-control form-control-sm">
+                    <input type="text" name="lev_postnr" class="form-control form-control-sm"
+                           value="{{ lev.postnr or '' }}">
                 </div>
                 <div class="col-md-5">
                     <label class="form-label-xs">By</label>
-                    <input type="text" name="lev_by" class="form-control form-control-sm">
+                    <input type="text" name="lev_by" class="form-control form-control-sm"
+                           value="{{ lev.by or '' }}">
                 </div>
                 <div class="col-md-12">
                     <label class="form-label-xs">Att. person på leveringsstedet (valgfrit)</label>
                     <input type="text" name="lev_att" class="form-control form-control-sm"
+                           value="{{ lev.att or '' }}"
                            placeholder="Fx ‘Alexander Veum tlf +47 95816471’">
                 </div>
             </div>
 
             <div class="alert mt-3" style="background:#f0f9ff; border:1px solid #bae6fd; color:#0c4a6e; font-size:0.85rem;">
                 <i class="fa fa-info-circle me-1"></i>
-                <strong>PDF'en indeholder:</strong> AhSolution-stamdata, kunde/importør-info (m. NO org.nr fra Dinero),
-                leveringsadresse, produktlinjer fra tilbud (m. HS-koder), fragt som separat linje, subtotal + total,
+                <strong>PDF'en indeholder:</strong> AhSolution-stamdata, kunde/importør-info, leveringsadresse,
+                de valgte produktlinjer (m. HS-koder), fragt som separat linje, subtotal + total,
                 "Moms 0% – eksport ML §34" og "DAP &lt;by&gt;, Norway (Incoterms® 2020)".
             </div>
 
-            <div class="d-flex justify-content-between mt-4">
-                <a href="/admin" class="btn btn-outline-secondary">Annuller</a>
-                <button type="submit" class="btn btn-primary fw-bold px-4" style="background:var(--accent);">
-                    <i class="fa fa-file-pdf-o me-1"></i> Download Toldfaktura PDF
-                </button>
+            <div class="d-flex justify-content-between mt-4 gap-2 flex-wrap">
+                <a href="/toldfaktura/{{ id }}" class="btn btn-outline-secondary">Annuller</a>
+                <div class="d-flex gap-2">
+                    <button type="submit" name="gem_og_hent_pdf" value="0" class="btn btn-outline-primary fw-bold">
+                        <i class="fa fa-save me-1"></i> Gem
+                    </button>
+                    <button type="submit" name="gem_og_hent_pdf" value="1" class="btn btn-primary fw-bold px-4" style="background:var(--accent); border-color:var(--accent);">
+                        <i class="fa fa-file-pdf-o me-1"></i> Gem &amp; hent PDF
+                    </button>
+                </div>
             </div>
         </form>
     </div>
@@ -176,6 +249,17 @@ function toggleLevAdr() {
     const def = document.getElementById('lev_default_info');
     div.style.display = cb.checked ? '' : 'none';
     def.style.display = cb.checked ? 'none' : '';
+}
+function opdaterVisning(cb) {
+    const row = cb.closest('.produkt-row');
+    if (cb.checked) row.classList.add('valgt');
+    else row.classList.remove('valgt');
+}
+function markerAlle(state) {
+    document.querySelectorAll('.valgt-cb').forEach(cb => {
+        cb.checked = state;
+        opdaterVisning(cb);
+    });
 }
 </script>
 </body>

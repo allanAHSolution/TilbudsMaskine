@@ -103,16 +103,37 @@
                         {% if t.projekt and t.projekt.oprettet %} · Projekt oprettet {{ t.projekt.oprettet }}{% endif %}
                     </div>
                 </div>
-                <div class="col-auto d-flex gap-2">
+                <div class="col-auto d-flex gap-2 flex-wrap">
                     <a href="/toldfaktura/{{ id }}" class="btn btn-sm fw-bold" style="background:rgba(255,255,255,0.2); color:white; border:1px solid rgba(255,255,255,0.4);">
-                        <i class="fa fa-file-pdf-o me-1"></i> Toldfaktura
+                        <i class="fa fa-file-pdf-o me-1"></i> Toldfakturaer
                     </a>
                     <a href="/nyt-tilbud?rediger={{ id }}" class="btn btn-sm fw-bold" style="background:rgba(255,255,255,0.2); color:white; border:1px solid rgba(255,255,255,0.4);">
                         <i class="fa fa-pencil me-1"></i> Ret tilbud
                     </a>
+                    <a href="/nyt-tilbud?ekstra={{ rod_tilbud_id }}" class="btn btn-sm fw-bold" style="background:rgba(255,255,255,0.2); color:white; border:1px solid rgba(255,255,255,0.4);" title="Opret et ekstra tilbud på samme projekt (samme kunde/site/valuta)">
+                        <i class="fa fa-plus me-1"></i> Ekstra tilbud
+                    </a>
                 </div>
             </div>
         </div>
+
+        {% if relaterede_tilbud %}
+        <div class="card p-3 mb-4" style="border-left:4px solid var(--accent);">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="small fw-bold" style="color:var(--accent);">
+                    <i class="fa fa-link me-1"></i>
+                    Andre tilbud i samme projekt ({{ (relaterede_tilbud|length) + 1 }} i alt)
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for rid, rt in relaterede_tilbud %}
+                    <a href="/projekt/{{ rid }}" class="btn btn-xs btn-outline-primary" style="font-size:0.72rem;">
+                        #{{ rt.nummer }}{% if rt.id == rod_tilbud_id %} <span class="badge ms-1" style="background:var(--accent); font-size:0.55rem;">HOVED</span>{% endif %}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
 
         <!-- ── KPI-kort ── -->
         {% set margin_pct = ((margin_dkk / faktureret_total_dkk * 100)|round(0)|int) if faktureret_total_dkk > 0 else 0 %}

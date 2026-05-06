@@ -497,7 +497,11 @@ def _hent_invoice_detail(guid: str) -> dict:
 def fetch_invoices(from_date: str = None, to_date: str = None,
                    include_drafts: bool = False) -> list[dict]:
     """
-    Henter alle salgsfakturaer fra Dinero (list + detail per faktura).
+    Henter alle salgsfakturaer fra Dinero med fuldt data i ét list-kald.
+
+    Bruger Dineros fields-parameter til at få beløb/valuta/status med
+    direkte i list-responsen — sparer 35+ separate detalje-kald pr.
+    dashboard-render og fjerner rate-limit-problemerne.
 
     Returnerer liste af dicts med nøgler:
         guid, number, date, contact_name, contact_guid, description,
@@ -505,9 +509,13 @@ def fetch_invoices(from_date: str = None, to_date: str = None,
         project_code (parset fra Description)
     """
     oid = _org_id()
+    fields = ",".join([
+        "Guid", "Number", "Date", "ContactName", "ContactGuid",
+        "Description", "TotalExclVat", "TotalInclVat", "Currency", "Status",
+    ])
     all_rows = []
     for page in range(20):
-        params = {"pageSize": 100, "page": page}
+        params = {"pageSize": 100, "page": page, "fields": fields}
         res = _request_med_retry(
             'GET', f"{API_BASE}/{oid}/invoices",
             headers=_headers(), params=params, timeout=20,
@@ -525,35 +533,30 @@ def fetch_invoices(from_date: str = None, to_date: str = None,
         if len(batch) < 100:
             break
 
-    # Filtrer på dato først for at minimere antal detalje-opslag
-    filtreret = []
+    ud = []
     for i in all_rows:
         dato = i.get("Date", "")
         if from_date and dato < from_date:
             continue
         if to_date and dato > to_date:
             continue
-        filtreret.append(i)
-
-    ud = []
-    for i in filtreret:
-        # Hent detalje for beløb + status
-        detail = _hent_invoice_detail(i["Guid"])
-        status = detail.get("Status") or detail.get("PaymentStatus") or ""
+        status = i.get("Status") or ""
         if not include_drafts and status in ("Draft", "draft", "Kladde"):
             continue
-        desc = detail.get("Description") or i.get("Description") or ""
+        desc = i.get("Description") or ""
+        # PaymentStatus er ikke et felt på list-API'et — udled fra Status
+        payment_status = status if status in ("Paid", "Overdue") else ""
         ud.append({
-            "guid":           i["Guid"],
-            "number":         detail.get("Number"),
-            "date":           i.get("Date"),
+            "guid":           i.get("Guid"),
+            "number":         i.get("Number"),
+            "date":           dato,
             "contact_name":   i.get("ContactName", ""),
-            "contact_guid":   detail.get("ContactGuid"),
+            "contact_guid":   i.get("ContactGuid"),
             "description":    desc,
-            "total_excl_vat": detail.get("TotalExclVat", 0),
-            "total_incl_vat": detail.get("TotalInclVat", 0),
-            "currency":       detail.get("Currency", "DKK"),
-            "payment_status": detail.get("PaymentStatus", ""),
+            "total_excl_vat": i.get("TotalExclVat", 0),
+            "total_incl_vat": i.get("TotalInclVat", 0),
+            "currency":       i.get("Currency", "DKK"),
+            "payment_status": payment_status,
             "status":         status,
             "project_code":   parse_project_code(desc),
         })

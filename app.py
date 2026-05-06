@@ -26,6 +26,7 @@ INDSTILLINGER_FILE = os.path.join(BASE_DIR, 'indstillinger.json')
 MALTE_FILE         = os.path.join(BASE_DIR, 'malte_aftale.json')
 UNOX_FILE          = os.path.join(BASE_DIR, 'unox_aftale.json')
 DINERO_TAGS_FILE   = os.path.join(BASE_DIR, 'dinero_bilag_tags.json')
+OPGAVER_FILE       = os.path.join(BASE_DIR, 'opgaver.json')  # generelle opgaver (ikke knyttet til projekt)
 
 ADMIN_USER = "allan"
 ADMIN_PASS = "ahsolution-Gjern-26"
@@ -1723,8 +1724,9 @@ def _dinero_allowlist(tilbud):
 
 
 def _alle_aabne_opgaver(all_data, idag):
-    """Saml ufærdige opgaver fra alle vundne, ikke-arkiverede projekter, sorteret efter frist."""
+    """Saml ufærdige opgaver fra alle vundne projekter + generelle opgaver, sorteret efter frist."""
     result = []
+    # Projekt-opgaver
     for tid, t in all_data.items():
         if t.get('arkiveret') or t.get('slettet') or t.get('vundet') is not True:
             continue
@@ -1734,16 +1736,31 @@ def _alle_aabne_opgaver(all_data, idag):
             frist_dt = _opgave_frist_dt(o)
             dage = (frist_dt - idag).days if frist_dt != datetime.max else None
             result.append({
-                'tilbud_id': tid,
-                'index': idx,
-                'titel': o.get('titel', ''),
-                'frist': o.get('frist', ''),
-                'frist_sort': frist_dt,
-                'dage': dage,
+                'er_generel':     False,
+                'tilbud_id':      tid,
+                'index':          idx,
+                'titel':          o.get('titel', ''),
+                'frist':          o.get('frist', ''),
+                'frist_sort':     frist_dt,
+                'dage':           dage,
                 'projekt_nummer': t.get('nummer'),
-                'projekt_kunde': t.get('kunde'),
-                'projekt_site': t.get('site'),
+                'projekt_kunde':  t.get('kunde'),
+                'projekt_site':   t.get('site'),
             })
+    # Generelle opgaver (ikke knyttet til projekt)
+    for o in load_data(OPGAVER_FILE, []):
+        if o.get('faerdig'):
+            continue
+        frist_dt = _opgave_frist_dt(o)
+        dage = (frist_dt - idag).days if frist_dt != datetime.max else None
+        result.append({
+            'er_generel':     True,
+            'opg_id':         o.get('id'),
+            'titel':          o.get('titel', ''),
+            'frist':          o.get('frist', ''),
+            'frist_sort':     frist_dt,
+            'dage':           dage,
+        })
     result.sort(key=lambda x: x['frist_sort'])
     return result
 
@@ -2004,6 +2021,61 @@ def projekt_slet_opgave(tilbud_id, index):
             opgaver.pop(index)
             save_data(TILBUD_FILE, all_data)
     return redirect(url_for('projekt_side', tilbud_id=tilbud_id))
+
+
+@app.route('/opgave/generel', methods=['POST'])
+def opgave_generel_opret():
+    """Opret en generel opgave (uden projekt-tilknytning)."""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+    titel = (request.form.get('titel') or '').strip()
+    if not titel:
+        return redirect(url_for('admin_panel'))
+
+    frist_raw = request.form.get('frist', '')
+    try:
+        frist = datetime.strptime(frist_raw, '%Y-%m-%d').strftime('%d-%m-%Y')
+    except ValueError:
+        frist = ''
+
+    opgaver = load_data(OPGAVER_FILE, [])
+    opgaver.append({
+        "id":       str(uuid.uuid4()),
+        "titel":    titel,
+        "frist":    frist,
+        "faerdig":  False,
+        "oprettet": datetime.now().strftime('%d-%m-%Y'),
+    })
+    save_data(OPGAVER_FILE, opgaver)
+    return redirect(url_for('admin_panel'))
+
+
+@app.route('/opgave/generel/toggle/<opg_id>')
+def opgave_generel_toggle(opg_id):
+    """Skift færdig-status for en generel opgave."""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+    opgaver = load_data(OPGAVER_FILE, [])
+    for o in opgaver:
+        if o.get('id') == opg_id:
+            o['faerdig'] = not o.get('faerdig', False)
+            break
+    save_data(OPGAVER_FILE, opgaver)
+    return redirect(url_for('admin_panel'))
+
+
+@app.route('/opgave/generel/slet/<opg_id>')
+def opgave_generel_slet(opg_id):
+    """Slet en generel opgave."""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+    opgaver = load_data(OPGAVER_FILE, [])
+    opgaver = [o for o in opgaver if o.get('id') != opg_id]
+    save_data(OPGAVER_FILE, opgaver)
+    return redirect(url_for('admin_panel'))
 
 
 @app.route('/nyt-tilbud')

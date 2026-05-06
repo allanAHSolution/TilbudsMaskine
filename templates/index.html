@@ -197,14 +197,32 @@
             <!-- ── VENSTRE: Opgaver + Faktureringsopgaver ── -->
             <div class="col-lg-4">
 
-                <!-- Projektopgaver -->
+                <!-- Opgaver -->
                 <div class="card p-4">
                     <div class="fw-bold mb-1" style="color: var(--accent); font-size:0.95rem;">
-                        <i class="fa fa-check-square-o me-1" style="color:#3b82f6;"></i> Projektopgaver
+                        <i class="fa fa-check-square-o me-1" style="color:#3b82f6;"></i> Opgaver
                     </div>
                     <div class="small mb-3" style="color: var(--text-muted);">
-                        {{ alle_opgaver|length }} åbne opgaver på tværs af projekter
+                        {{ alle_opgaver|length }} åbne opgaver
                     </div>
+
+                    <!-- Hurtig tilføj generel opgave -->
+                    <form action="/opgave/generel" method="POST" class="p-2 rounded mb-3" style="background:#eff6ff; border:1px solid #bfdbfe;">
+                        <div class="row g-1">
+                            <div class="col-7">
+                                <input type="text" name="titel" class="form-control form-control-sm"
+                                       placeholder="Ny opgave (uden projekt)" required style="font-size:0.75rem;">
+                            </div>
+                            <div class="col-3">
+                                <input type="date" name="frist" class="form-control form-control-sm" value="{{ now_date }}" style="font-size:0.7rem;">
+                            </div>
+                            <div class="col-2">
+                                <button type="submit" class="btn btn-sm w-100 fw-bold" style="background:var(--accent); color:white; border:none; font-size:0.7rem;">
+                                    <i class="fa fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
 
                     {% if alle_opgaver %}
                     {% for o in alle_opgaver %}
@@ -217,11 +235,18 @@
                         <div class="d-flex justify-content-between align-items-start gap-1">
                             <div style="min-width:0;">
                                 <div style="font-size:0.75rem; font-weight:600; color:var(--text-dark);" class="text-truncate">
+                                    {% if o.er_generel %}<i class="fa fa-tasks me-1" style="color:#7c3aed; font-size:0.65rem;" title="Generel opgave"></i>{% endif %}
                                     {{ o.titel }}
                                 </div>
+                                {% if not o.er_generel %}
                                 <div style="font-size:0.68rem; color: var(--text-muted);">
                                     #{{ o.projekt_nummer }} – {{ o.projekt_kunde }}{% if o.projekt_site %} · {{ o.projekt_site }}{% endif %}
                                 </div>
+                                {% else %}
+                                <div style="font-size:0.68rem; color: #7c3aed;">
+                                    Generel opgave
+                                </div>
+                                {% endif %}
                                 <div style="font-size:0.68rem; color: var(--text-muted);">
                                     {% if o.frist %}Frist {{ o.frist }}
                                         {% if o.dage is not none %}
@@ -235,10 +260,18 @@
                                 </div>
                             </div>
                             <div class="d-flex flex-column gap-1 flex-shrink-0">
+                                {% if o.er_generel %}
+                                <a href="/opgave/generel/toggle/{{ o.opg_id }}"
+                                   class="btn btn-xs btn-outline-success" title="Markér som færdig">✓</a>
+                                <a href="/opgave/generel/slet/{{ o.opg_id }}"
+                                   onclick="return confirm('Slet opgave?')"
+                                   class="btn btn-xs btn-outline-danger" style="font-size:0.65rem;" title="Slet">✕</a>
+                                {% else %}
                                 <a href="/projekt/{{ o.tilbud_id }}/opgave/toggle/{{ o.index }}?redir=admin"
                                    class="btn btn-xs btn-outline-success" title="Markér som færdig">✓</a>
                                 <a href="/projekt/{{ o.tilbud_id }}" class="btn btn-xs btn-outline-secondary"
                                    style="font-size:0.65rem;">Gå til</a>
+                                {% endif %}
                             </div>
                         </div>
                     </div>

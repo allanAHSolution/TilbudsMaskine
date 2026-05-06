@@ -167,6 +167,13 @@ def gæt_hs_kode(navn):
     return ''
 
 
+def _dinero_kategori(beskrivelse, kunde):
+    """Map en faktura til Dinero-kategori 'varer' eller 'ydelser'.
+    Bruges til at vælge salgskonto ved eksport (1255 vs 1260)."""
+    kat = _kategoriser_faktura(beskrivelse, kunde)
+    return 'ydelser' if kat in ('timer', 'kommission') else 'varer'
+
+
 def _kategoriser_faktura(beskrivelse, kunde):
     """Klassificér en faktura som produkter / timer / kommission baseret
     på tekst. Bruges til opdelt omsætningsgraf."""
@@ -858,6 +865,7 @@ def dinero_sync():
                         moms=t.get('moms', 'ja'),
                         beskrivelse=titel,
                         kommentar=komment,
+                        kategori=_dinero_kategori(beskrivelse, t.get('kunde', '')),
                     )
                     f['dinero_guid']      = new_guid
                     f['dinero_timestamp'] = ts
@@ -2356,6 +2364,7 @@ def faktura_tilfoej(tilbud_id):
                 moms=moms_faktura,
                 beskrivelse=titel,
                 kommentar=komment,
+                kategori=_dinero_kategori(beskrivelse, t.get('kunde', '')),
             )
             faktura["dinero_guid"]      = guid
             faktura["dinero_timestamp"] = ts

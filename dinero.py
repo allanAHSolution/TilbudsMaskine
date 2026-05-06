@@ -240,13 +240,16 @@ def slet_faktura(guid, timestamp):
 
 def opret_faktura(kunde_navn, linjer, dato=None, valuta="DKK",
                   kommentar="", beskrivelse=None, kontakt_email="",
-                  moms="ja"):
+                  moms="ja", kategori="varer"):
     """
     Opretter en faktura-kladde i Dinero.
 
     linjer: liste af dicts med keys: beskrivelse, antal, enhedspris (DKK).
-    moms: 'ja' → konto 1000 (m/moms), 'nej' → konto 1050 (u/moms).
-    Ikke-DKK valuta tvinger altid konto 1050 (eksport).
+    moms: 'ja' → konto 1000 (m/moms), 'nej' → konto 1050 (u/moms indenlandsk).
+    kategori: 'varer' eller 'ydelser' — bruges til at vælge eksport-konto.
+        Eksport (ikke-DKK valuta):
+            varer   → 1255 (Salg af varer til udlandet, rubrik C)
+            ydelser → 1260 (Salg af ydelser til udlandet, rubrik C)
     beskrivelse: titlen på fakturaen (synlig i Dinero-kladde). Hvis None,
                  bruges kommentar som fallback.
 
@@ -255,9 +258,17 @@ def opret_faktura(kunde_navn, linjer, dato=None, valuta="DKK",
     oid = _org_id()
     contact_id = find_eller_opret_kontakt(kunde_navn, kontakt_email)
 
-    # Vælg salgskonto: 1000 m/moms, 1050 u/moms (eksport)
+    # Vælg salgskonto:
+    #   - Eksport (ikke-DKK):  1255 (varer) / 1260 (ydelser)
+    #   - DKK m/moms:          1000
+    #   - DKK u/moms:          1050
     eksport = valuta.upper() != "DKK"
-    konto = 1000 if (moms == "ja" and not eksport) else 1050
+    if eksport:
+        konto = 1260 if str(kategori).lower() == "ydelser" else 1255
+    elif moms == "ja":
+        konto = 1000
+    else:
+        konto = 1050
 
     product_lines = []
     for l in linjer:
